@@ -1,0 +1,7 @@
+{
+  "name": "Hava-durumlari.tr Weather Hub (SEO Update)",
+  "description": "Premium glassomorphic weather forecast for the Turkish market.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

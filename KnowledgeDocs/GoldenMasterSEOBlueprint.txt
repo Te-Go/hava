@@ -1,0 +1,445 @@
+This document is the definitive engineering protocol for the Tedder Dijital ecosystem (hava-durumlari.tr, altın-fiyatları.tr, doviz-kuru.com, kripto-paralar.com, canli-borsa.com).
+GOLDEN MASTER SEO EXECUTION BLUEPRINT
+Protocol for "Second Click" Capture & Top 3 Ranking
+Objective: Engineer a fleet of "Utility Hubs" that bypass Google’s AI Overviews and crush legacy competitors through technical superiority.
+________________________________________
+1. CORE PHILOSOPHY: The "Utility" Pivot
+The 2026 Reality: Google AI (SGE) summarizes information. It cannot summarize interaction.
+The Mandate: Every page must contain a Tool, Chart, or Dynamic Data Visual above the fold.
+✅ Positive Execution (We Win)	❌ Negative Execution (We Lose)
+Page: "Gold Prices"	Page: "Gold Prices"
+Content: A React-based Calculator ("If I have 1000 TL, I can buy...").	Content: A text article listing today's prices.
+Result: User must click to calculate. Google ranks us as a "Tool."	Result: Google AI reads the text, displays the price. Zero Clicks.
+________________________________________
+2. SCHEMA ARCHITECTURE: The "Software" Signal
+We explicitly tell Google we are Software Applications, not Blogs. This triggers rich results (Star Ratings, App details) and CTR-boosting visual elements.
+A. WebApplication Schema (High Impact)
+Target: Pages with Radar, Calculators, Converters.
+Goal: Rich Snippets with "Star Ratings" and "Free" price tag.
+JSON-LD Template:
+JSON
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "{{Page_Title}}",
+  "url": "{{Current_URL}}",
+  "applicationCategory": "FinanceApplication", 
+  "operatingSystem": "All",
+  "browserRequirements": "Requires JavaScript",
+  "screenshot": "{{URL_to_Tool_Screenshot}}",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TRY"
+  },
+  "featureList": "Live Data Feed, Interactive Chart, Instant Calculation"
+}
+</script>
+
+⚠️ RED FLAG (Harmful Execution):
+●	The Mistake: Placing WebApplication schema on a standard news article or blog post.
+●	The Effect: Manual Action (Penalty). Google will de-index the site for "Structured Data Spam."
+●	Rule: Only inject this if a functional tool exists on the page.
+B. LiveBlogPosting Schema (The "Red Badge")
+Target: Homepage & Main Data Dashboards.
+Goal: Triggers the "LIVE" (CANLI) red badge in SERPs.
+Implementation Logic:
+●	coverageStartTime: Today at 00:00:01.
+●	coverageEndTime: Today at 23:59:59.
+●	dateModified: Must match the last API fetch timestamp.
+⚠️ THE "KILL SWITCH" (Critical Safety):
+●	The Mistake: Leaving the "Live" schema active when the API is down or data hasn't updated in hours.
+●	The Effect: Google detects "Stale" data marked as "Live." It permanently removes your eligibility for the Live Badge.
+●	The Fix:
+●	PHP
+// IF data is older than 2 hours, DO NOT print Schema
+if ((time() - $last_api_update_timestamp) > 7200) { return; }
+●	
+●	
+C. FAQPage Schema (The "Pixel Occupier")
+Target: City Pages (e.g., /istanbul) and Instrument Pages (e.g., /gram-altin).
+Goal: Dominate vertical pixel space, pushing competitors below the fold.
+The "Bait" Strategy:
+●	Question: "İstanbul'da yarın yağmur var mı?"
+●	Answer: "Evet, öğleden sonra %60 ihtimalle yağış bekleniyor. Tam saatlik raporu ve yağış haritasını görmek için tıklayın..."
+⚠️ RED FLAG:
+●	The Mistake: Answering the question fully without a hook (e.g., "Yes, it will rain at 2 PM.").
+●	The Effect: User reads the answer in the Google Snippet and does not click.
+________________________________________
+3. THE "FRESHNESS" ENGINE (QDF Protocol)
+Google loves "Fresh" content. We must update our lastmod timestamp frequently, but safely.
+The Protocol:
+Do NOT rely on WordPress default save behavior. We programmatically update the post_modified timestamp based on API Data changes.
+The "Throttling" Logic (Anti-Crash):
+We must prevent database thrashing (writing to DB every second).
+●	Rule 1: Only update if the change is Significant.
+○	Weather: Temp change > 2°C OR Condition Change (Sun -> Rain).
+○	Gold: Price change > 0.5%.
+●	Rule 2: Minimum Time Buffer.
+○	Do not update the same page more than once every 15 minutes.
+⚠️ RED FLAG (Harmful Execution):
+●	The Mistake: "Churning" (Updating the timestamp every minute even if data hasn't changed).
+●	The Effect: Google classifies this as "Freshness Spam." Your crawl budget will be destroyed, and rankings will drop.
+3.1 The "Virtual Page" Lifecycle Management
+Objective: Manage the thousands of long-tail pages (e.g., "Besiktas hourly weather") without bloating the index with low-quality pages.
+The Protocol:
+1.	The "Traffic Threshold" Indexing:
+○	Initially, set niche District/Long-tail pages to noindex, follow.
+○	Only switch to index if:
+■	A user visits the page internally (via search bar).
+■	API data indicates a "Severe Event" (Storm in that specific district).
+2.	The "Canonical" Strategy:
+○	If the weather in "Kadikoy" is identical to "Istanbul," the Kadikoy page should self-canonicalize to itself only if it has unique narrative content. Otherwise, it risks being seen as a duplicate.
+○	Our Solution: We ensure Kadikoy always has unique narrative content via the "Dynamic Titles" and "Template Entropy" (e.g., specific marine wind data for Kadikoy ferry terminal).
+
+The "Cache Purge" Command (Crucial)
+Issue: the document tells devs to update the post_modified timestamp. 
+Risk: We are using LiteSpeed Cache (from your Tech Stack requirements). If we update the timestamp in the database but do not tell LiteSpeed to clear the cache for that page, users (and Google) will still see the old "Cached" version with the old date.
+Action: Add this specific line to the PHP Logic:
+Updated Code Instruction:
+PHP
+// Only update WP Post Timestamp if thresholds are met
+if (abs($new_temp - $old_temp) > WEATHER_TEMP_THRESHOLD) {
+    // 1. Update Database
+    wp_update_post(['ID' => $post_id, 'post_modified' => current_time('mysql')]);
+    
+    // 2. PURGE LITESPEED CACHE (CRITICAL ADDITION)
+    if (defined('LSCWP_V')) {
+        do_action('litespeed_purge_post', $post_id);
+    }
+}
+
+Without this line, the Freshness Engine does not work.
+
+
+________________________________________
+4. PROGRAMMATIC SEO: Dynamic Titles
+Static titles are dead. We use Data-Driven Hooks in our <title> tags to answer user anxiety.
+The Formula: [Location/Asset] + [Dynamic Hook] + [Brand]
+Implementation Examples:
+●	Scenario A (Rain): İstanbul: Saat 14:00'te Yağmur Başlıyor | Hava Durumları
+●	Scenario B (Gold Drop): Gram Altın Düşüşte: Alım Fırsatı Mı? | Canlı Piyasalar
+The "Pixel Width" Safety Check:
+Google cuts titles off at ~600px (approx 60 chars). A truncated title looks broken and lowers CTR.
+●	Logic:
+●	PHP
+$title_hook = "Saat 14:00'te Yağmur Başlıyor";
+if (mb_strlen($base_title . $title_hook) > 60) {
+    $title_hook = "Yağmur Uyarısı"; // Use shorter fallback
+}
+●	
+●	
+⚠️ RED FLAG:
+●	The Mistake: Generating titles that make false promises (e.g., "Snow Storm" when it's just cloudy).
+●	The Effect: High "Pogo-sticking" (Users click, see it's fake, and leave immediately). Google will bury the site.
+4.1 Doorway Pages
+Objective: Prevent Google from seeing our 81 city pages as duplicate "Doorway Pages."
+The Logic: We must programmatically vary the Layout and Content Structure based on data attributes.
+Implementation (Dev Instruction): Do not use one single template for all cities. Create 3 variations of the City_Template:
+●	Template A (Coastal Cities): Prioritizes "Wind," "Humidity," and "Marine Warning" widgets at the top.
+○	Trigger: If is_coastal == true.
+●	Template B (Inland/Cold Cities): Prioritizes "Night Freeze," "Heating Degree Days," and "Snow" widgets.
+○	Trigger: If avg_temp < 5 OR region == 'Anatolia'.
+●	Template C (Metropolis): Prioritizes "Air Quality (PM2.5)" and "Traffic Impact."
+○	Trigger: If population > 2,000,000.
+The SEO Signal: Google bots see different HTML structures, different prioritized data, and unique local intent for Izmir vs. Erzurum. We are safe.
+
+________________________________________
+5. E-E-A-T: The "Anti-AI" Trust Signals
+We must prove we are Human Experts, not AI Content Farms.
+A. Entity Linking (SameAs)
+Link our pages to the Global Knowledge Graph (Wikidata).
+●	Action: On the Istanbul page, inject this into Schema:
+"sameAs": "https://www.wikidata.org/wiki/Q406"
+●	Result: Google understands this page is definitively about the Entity "Istanbul."
+B. The "Trust Box"
+Every page must have a visible citation box.
+●	Content: "Data Source: Meteoroloji Genel Müdürlüğü (MGM) / Borsa İstanbul Official Data."
+●	Why: Builds immediate authority ("A" in E-A-T).
+⚠️ RED FLAG:
+●	The Mistake: Using "Admin" as the author of posts.
+●	The Effect: Zero Trust.
+●	The Fix: Create Author Profiles: "Meteo Analist Cengiz" or "Finans Editörü [Name]" with bio and photos.
+5.1 The "YMYL Verification" Layer
+Objective: Satisfy the strict 2025 "Experience" requirements for Finance and Weather.
+Implementation:
+1.	The "Fact-Check" Schema: On all automated news/analysis pieces, inject ClaimReview schema if we are citing a specific number (e.g., "Inflation is 60%").
+○	Source: Link to TCMB (Central Bank) or MGM (Meteorology).
+2.	The "ReviewedBy" Attribute: Even if the content is programmatic, the footer of the article must say:
+○	"Algorithmically generated from MGM data. Reviewed by [Human_Editor_Name]."
+○	Link: The name must link to an Author Bio page with credentials.
+The "Entity Unification" (TG Dijital)
+Issue: The Schema examples in the document still reference "Tedder Network" or "Tedder Finans." Fix: You must update the JSON-LD snippets to reflect the new Group Brand. This ensures Google's Knowledge Graph attributes all 5 hubs to one powerful parent entity (TG Dijital).
+Action: Update Section 5 (E-E-A-T) / Trust Box and Section 8 (Authorship) in the document with these values:
+●	Organization Name: TG Dijital
+●	Author (Desk): TG Finans Masası (TG Finance Desk) or TG Meteo
+●	Editor Bio: "Ted [Lastname], Chief Data Editor at TG Dijital..."
+Corrected JSON-LD Snippet for Devs (Section 5):
+JSON
+"publisher": {
+  "@type": "Organization",
+  "name": "TG Dijital",
+  "logo": "https://hava-durumlari.tr/tg-dijital-logo.png",
+  "sameAs": [
+    "https://www.linkedin.com/company/tg-dijital", 
+    "https://twitter.com/tg_dijital"
+  ]
+}
+
+________________________________________
+6. PERFORMANCE: The 2026 Speed Hack
+We use the Speculation Rules API to achieve "perceived" instant loading.
+Implementation:
+Inject this script into the <head> of main dashboards. It tells the browser to "pre-render" the page when the user hovers over a link, before they even click.
+HTML
+<script type="speculationrules">
+{
+  "prerender": [
+    {
+      "source": "document",
+      "where": {
+        "selector_matches": ".city-rail-link" // Target your main navigation buttons
+      },
+      "eagerness": "moderate"
+    }
+  ]
+}
+</script>
+
+⚠️ RED FLAG:
+●	The Mistake: Pre-rendering every link on the page.
+●	The Effect: Massive data usage for the user (mobile drain) and server overload for us.
+●	Rule: Only pre-render the "Next Logical Step" (e.g., Top 5 Cities or "Next Day" button).
+The "Speculation Rules" Safety (Data Saver)
+Issue: Performance pre-rendering is aggressive. In Turkey, mobile data is expensive. 
+Fix: Add a small "eagerness" adjustment to the JSON code to be polite to users' data plans.
+Updated Code (Section 6):
+JSON
+{
+  "prerender": [
+    {
+      "source": "document",
+      "where": {
+        "selector_matches": ".city-rail-link"
+      },
+      "eagerness": "conservative" // Changed from 'moderate' to 'conservative' (Hover > 200ms)
+    }
+  ]
+}
+
+Note: "Conservative" waits until the user hovers for a split second longer, ensuring they actually intend to click, saving data.
+
+
+________________________________________
+7. THE "NEURAL NETWORK": Cross-Hub Strategy
+We transfer power between hubs using Contextual Widgets, not footer links.
+The Logic:
+●	Scenario: High volatility in Gold.
+●	Action: On the Weather Hub, a sidebar widget appears:
+"Economy Alert: Gold just dropped 2%. See Live Chart on Altın-Fiyatları.tr"
+●	Result: High-relevance traffic flow.
+⚠️ RED FLAG:
+●	The Mistake: "Site-wide" footer links (Linking every page to every other page).
+●	The Effect: Google views this as a "Link Network" (PBN) and penalizes all sites.
+●	Rule: Links must be contextual and helpful, appearing only where relevant.
+________________________________________
+📝 Final Developer Checklist
+1.	[ ] Kill Switch: Is the logic in place to remove "Live" schema if API data is stale?
+2.	[ ] Throttling: Is the "Freshness Engine" limited to 1 update per 15 mins?
+3.	[ ] Pixel Check: Is the Title Tag logic checking for length < 60 chars?
+4.	[ ] Tool Schema: Is WebApplication schema restricted ONLY to pages with actual tools?
+5.	[ ] Entity Links: Are Wikidata links injected into the City/Asset schemas?
+Appendix:
+Defensive & Offensive Asset List for the TG Dijital Network.
+In the 2026 SEO landscape, Google’s algorithms (SpamBrain, RankBrain, and the AI Overview/SGE module) prioritize Utility, Freshness, and Trust.
+I have ranked these elements by Significance.
+●	Tier 1 (Critical): Without these, we risk de-indexing or zero visibility.
+●	Tier 2 (High Impact): These win the "Second Click" and beat the snippet.
+●	Tier 3 (Authority): These build long-term E-E-A-T and retention.
+________________________________________
+🚨 TIER 1: CRITICAL SURVIVAL & ACCESS
+If these are missing, the project fails.
+1. "Template Entropy" (Anti-Doorway Logic)
+●	Why: Google 2026 destroys sites with "cookie-cutter" programmatic pages (e.g., 81 city pages that look identical).
+●	The Element: Conditional Layout Injection.
+●	Execution: The code must detect the data and change the layout.
+○	Example: If City = Coastal, inject a "Marine Wind" widget. If City = Inland, inject a "Frost Warning" widget.
+○	Result: Google sees 81 unique pages, not 81 duplicates.
+2. The "Freshness Engine" (Programmatic lastmod)
+●	Why: For Weather and Finance, "Old" = "Dead." Google prioritizes the most recently updated page.
+●	The Element: Event-Triggered Timestamp Updating.
+●	Execution: We do not wait for a human to edit. If the API shows a temp change > 2°C or Gold change > 0.5%, the system automatically updates the post_modified date in the database and Sitemap.
+3. WebApplication Schema (The "Tool" Signal)
+●	Why: Google AI summarizes text. It drives traffic to tools. We must tell Google we are Software.
+●	The Element: JSON-LD Structured Data.
+●	Execution: Inject schema.org/WebApplication on all Calculator, Radar, and Converter pages. Include applicationCategory: FinanceApplication or WeatherApplication.
+4. The "Kill Switch" (Schema Safety)
+●	Why: Broken automated data leads to "Spam" penalties.
+●	The Element: Conditional PHP Logic.
+●	Execution: If the API connection fails or data is > 2 hours old, the system must automatically strip all "Live" and "Web App" schemas to prevent misleading Google.
+________________________________________
+🚀 TIER 2: DOMINATION & "SECOND CLICK" CAPTURE
+These elements force the user to click instead of reading the AI summary.
+5. Dynamic Title Hooks (The CTR Bait)
+●	Why: Static titles ("Istanbul Weather") are ignored. Specific promises get clicks.
+●	The Element: Data-Driven <title> Tags.
+●	Execution: Titles change based on the API.
+○	Bad: "Istanbul Hava Durumu"
+○	Good: "İstanbul: Saat 14:00'te Yağmur Başlıyor | Saatlik Rapor"
+6. LiveBlogPosting Schema (The Red Badge)
+●	Why: Users click "Live" results 30-40% more often.
+●	The Element: Live Coverage JSON-LD.
+●	Execution: Use on Homepages and Dashboards. Set coverageStartTime to the start of the day and coverageEndTime to the end. Matches the "Freshness Engine."
+7. Interactive "Moat" Tools (Above the Fold)
+●	Why: Retains the user immediately (low bounce rate).
+●	The Element: React Components (Calculators/Radars).
+●	Execution:
+○	Gold: "Düğün Altını Hesaplama" (Wedding Gold Calculator).
+○	Weather: "Interactive Rain Radar" (User must pan/zoom).
+8. Comparison Tables (The AI Killer)
+●	Why: AI Overviews are bad at rendering complex, multi-column comparison data.
+●	The Element: Side-by-Side Data Grids.
+●	Execution: Show "Bank Rate" vs. "Kapalıçarşı Rate" vs. "Jeweler Rate." The complexity forces a click because the AI summary cannot display it accurately.
+________________________________________
+🛡️ TIER 3: AUTHORITY & LONG-TERM TRUST (E-E-A-T)
+These elements protect against Core Updates and build Brand Value.
+9. "Trust Box" Citations
+●	Why: Users (and Google) are skeptical of AI content. They trust official sources.
+●	The Element: Source Attribution Widget.
+●	Execution: A visible box on every page: "Data Source: Meteoroloji Genel Müdürlüğü (MGM)" or "BIST Official Data."
+10. FAQPage Schema (Pixel Occupation)
+●	Why: Pushes competitors down the screen.
+●	The Element: Structured Q&A Data.
+●	Execution: 3 programmatic questions at the bottom of City/Asset pages.
+○	Q: "Will it rain in [City] tomorrow?"
+○	A: "Yes, at [Time]. Click for hourly breakdown." (The link is crucial).
+11. Entity Linking (SameAs)
+●	Why: Connects your page to the Knowledge Graph.
+●	The Element: Wikidata Identification.
+●	Execution: In the Schema, link the "Istanbul" page to wikidata.org/wiki/Q406. Link the "Gold" page to the Gold element entity.
+12. Human "Persona" Authorship
+●	Why: Google 2026 looks for "Hidden Gems" (Human experience).
+●	The Element: Author Bio & Profile.
+●	Execution: Use specific personas ("Meteo Analyst," "Market Editor") with real bios, not just "Admin."
+________________________________________
+⚡ TIER 4: UX & SPEED (CONVERSION)
+These ensure the user stays once they arrive.
+13. Speculation Rules API (Instant Load)
+●	Why: Mobile users leave if a page takes > 2 seconds.
+●	The Element: Prerender Script.
+●	Execution: Browser pre-loads the next page when the user hovers over a city link.
+14. Contextual "Neural" Widgets
+●	Why: Moves traffic from high-volume sites to high-revenue sites.
+●	The Element: Dynamic Cross-Link Modules.
+●	Execution: A widget on the Weather site that only appears if Gold drops > 1%, linking to the Gold site.
+15. Sticky "Network" Header
+●	Why: Brand recall.
+●	The Element: Global Navigation Bar.
+●	Execution: A slim bar at the top linking all 5 hubs (Hava | Altın | Döviz | Kripto | Borsa).
+________________________________________
+📝 Summary Checklist for Dev Team
+1.	Anti-Doorway Logic (Template Entropy) - Top Priority
+2.	Freshness Engine - Top Priority
+3.	WebApplication Schema - Top Priority
+4.	Kill Switch - Top Priority
+5.	Dynamic Titles
+6.	LiveBlogPosting Schema
+7.	Interactive Tools
+8.	Comparison Tables
+9.	Trust Box
+10.	FAQ Schema
+
+This Golden Master is now in excellent shape. I have reviewed the attached file content, and it successfully incorporates all the critical feedback (TG Dijital rebranding, LiteSpeed cache purging, conservative pre-rendering, and the "Doorway" defense).
+3 final "Polish" recommendations:
+✅ 1. The "CLS" Safety Check (Ad Placement)
+The Risk: You are building "Utility" pages (Calculators, Radars). If you insert a lazy-loaded AdSense banner above the calculator, the layout will "jump" (Cumulative Layout Shift) just as the user tries to click.
+The Penalty: Google creates a poor "Page Experience" score, which kills rankings even if the content is great.
+The Fix:
+●	Rule: Reserve a fixed-height container for ads above the fold.
+●	Dev Instruction: min-height: 250px; on the ad wrapper div. This ensures the content doesn't jump when the ad loads.
+✅ 2. The "Empty State" Fallback (Soft 404 Defense)
+The Risk: You have 81 city pages. What happens if the API returns null or fails for a specific city (e.g., "Bayburt")?
+The Penalty: If the page loads with empty charts or zeros, Google treats it as a "Soft 404" (Low Quality) and might de-index it.
+The Fix:
+●	Protocol: Always have "Fallback Data" (e.g., Regional Average) or a user-friendly message: "Live data currently unavailable for Bayburt. Showing regional forecast for Erzurum..."
+●	Dev Instruction: Never render a blank chart. Render a "Data Pending" state or fallback widget.
+✅ 3. The "Log" File (For Debugging the Engines)
+The Risk: You have a "Kill Switch" and "Throttling" logic. If the "Live" badge disappears from Google, you won't know why (Was it the API? Was it the Kill Switch? Was it a bug?).
+The Fix:
+●	Dev Instruction: Create a simple server-side log file (seo_events.log).
+○	Log Entry: [Time] Freshness Engine Skipped: Temp change (0.1C) below threshold.
+○	Log Entry: [Time] Live Schema KILLED: API Data is 130 mins old.
+________________________________________
+
+
+
+The "Publisher vs. Editor" Protocol.
+Here is the exact strategy to solve this without hiring, keeping your E-E-A-T score high.
+________________________________________
+1. The Strategy: "The Two Hats"
+You will separate your Corporate Identity (CEO) from your Editorial Identity (Analyst).
+●	On the "About Us" / Corporate Page: You remain "Ted - Founder & CEO of TG Dijital." This builds business trust (you are a real company).
+●	On the "Article Bylines": You will use a slightly adjusted Title or a "Desk" Persona.
+2. The Solution: "Desk" Personas (Recommended)
+Instead of forcing your name onto every niche, use "Editorial Desks" for the day-to-day news. This is standard practice for major outlets like Bloomberg or Reuters.
+●	Weather Hub: Author = "TG Meteoroloji Masası" (Tedder Meteorology Desk)
+○	Bio: "Tedder Dijital'in veri odaklı hava durumu analiz ekibi. MGM ve ECMWF verilerini kullanarak anlık raporlar hazırlar."
+●	Finance Hubs: Author = "TG Finans Analiz"
+○	Bio: "Kapalıçarşı ve BIST verilerini anlık takip eden finansal veri ekibi."
+Why this wins: It sounds bigger than one person. It removes the "Marketing" bias.
+3. If You WANT to Use Your Name (The "Polymath" Rebrand)
+If you prefer to be the named author, you must change your public facing "Headline" on these specific websites. Do not use the same bio text everywhere.
+Adjust your Bio for the Hubs:
+●	Bad (Current): "Ted, Digital Marketing CEO. Expert in SEO and Web Growth."
+●	Good (For Gold/Forex): "Ted, Chief Data Editor. Specializes in Turkish financial market data analysis and algorithmic trading signals."
+●	Good (For Weather): "Ted, Lead Systems Architect. Focused on meteorological data modeling and real-time forecast accuracy."
+The Golden Rule: Highlight your Data/Analytical skills. "Data Analyst" is a neutral authority that fits both Weather and Finance. "Marketer" fits neither.
+________________________________________
+🏛️ ADDITION TO GOLDEN MASTER: The "Author Protocol"
+I am adding this Section 8 to the Golden Master Blueprint to ensure we execute this safely.
+8. AUTHORSHIP & PERSONA PROTOCOL (YMYL Defense)
+Objective: Prevent "Expertise Mismatch" penalties.
+A. The "No-Marketer" Rule
+●	Protocol: Never link an article about Health, Finance, or Safety to a bio that describes the author primarily as a "Marketer" or "SEO."
+●	Fix: Use specific "Data Analyst" or "Chief Editor" titles.
+B. The "Desk" Strategy (Scale)
+●	Protocol: For programmatic or high-frequency updates (e.g., "Gold jumped 1%"), use a branded "Desk" account (e.g., TG Finans).
+●	Schema: Mark this author type as Organization in Schema, not Person.
+C. The "Reviewer" Signal
+●	Protocol: Even if you write the article, add a "Data Source" citation.
+●	Visual: "Data Verified by: MGM API / BIST Data Stream."
+________________________________________
+My Recommendation: For Phase 1 launch, use "TG Finans Masası" (Desk) as the author for the quick updates. Use "Ted (Chief Editor)" for the longer, "human-written" analysis pieces. Change your site-specific bio to emphasize Data Analysis, not Marketing.
+Yes, absolutely. You must adjust it.
+Linking to a LinkedIn profile that says "Digital Marketing CEO" from a Crypto or Gold investment article is a massive E-E-A-T risk.
+Google’s Quality Raters (and the algorithm) look for "Mismatching Expertise." If a marketer gives financial advice, it triggers a red flag (Trust Signal: Low). If a "Data Analyst" gives financial advice, it triggers a green flag.
+Here is the precise protocol to handle this without hiring new staff:
+1. The "Re-Framing" Strategy (Your LinkedIn)
+You do not need to delete your marketing background, but you must bridge the gap between "Marketing" and "Data/Finance" on your public profile.
+Action: Go to your LinkedIn Headline and Summary. Add "Data Systems" or "Asset Strategy" keywords.
+●	Current: Tedder Digital Marketing Founder and CEO
+●	Change to: Founder, TG Group | Digital Asset Strategist & Data Systems Architect
+Why this works:
+●	"Digital Asset Strategist" covers Crypto & Gold.
+●	"Data Systems Architect" covers Weather (Meteorology is data).
+●	"Founder" covers your agency business.
+2. The Website Bio (On the Hubs)
+On the actual websites (altın-fiyatları.tr, etc.), do not use the title "CEO." Use a functional editorial title.
+Recommended Title: "Chief Data Editor" (Veri Şefi / Baş Editör)
+Write this Bio for the Sites:
+"Ted [Lastname], Chief Data Editor. Specializes in algorithmic tracking of Turkish financial markets and meteorological data modeling. Founder of the Tedder Network."
+●	Logic: This positions you as a technical expert who understands the data behind the gold/weather, rather than a marketer trying to sell ads.
+3. The "Desk" Persona (For High Volume)
+Since you are the only writer, you cannot write 50 "human" articles a day. For the daily/hourly price updates, do not use your name.
+Use a "Desk" Persona:
+●	Author Name: "Tedder Finans Masası" (TG Finance Desk) or "Tedder Meteo"
+●	Bio: "The automated data analysis unit of TG Digital. Verified by BIST/MGM APIs."
+●	Why: This makes the company look larger and protects your personal "Chief Editor" profile for the high-quality, deep-dive analysis articles.
+4. Summary Checklist
+1.	LinkedIn: Tweak headline to include "Data/Assets."
+2.	Site Bio: Change "CEO" to "Chief Data Editor."
+3.	Linking: Yes, link your modified LinkedIn. Google needs to verify you are a real person (Entity Verification).
+4.	Daily Content: Publish under the "Desk" persona.
+5.	Deep Content: Publish under "Ted [Lastname], Chief Data Editor."
+This is the safest path to High E-E-A-T without hiring new writers.

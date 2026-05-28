@@ -1,0 +1,130 @@
+/**
+ * Weather App - Custom Animations
+ * Extracted from inline styles in Icons.tsx for better performance
+ */
+
+/* Weather Icon Animations */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.95); }
+}
+
+@keyframes rain {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(15px); opacity: 0; }
+}
+
+@keyframes snow {
+  0% { transform: translateY(0); opacity: 0.8; }
+  100% { transform: translateY(15px); opacity: 0; }
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 0; }
+  10%, 90% { opacity: 0; }
+  15%, 85% { opacity: 1; }
+}
+
+/* Animation utility classes */
+.animate-spin-slow {
+  animation: spin 12s linear infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: float 5s ease-in-out infinite reverse;
+}
+
+.animate-pulse-weather {
+  animation: pulse 3s infinite;
+}
+
+.animate-rain {
+  animation: rain 1s linear infinite;
+}
+
+.animate-rain-delay-1 {
+  animation: rain 1.2s linear infinite;
+  animation-delay: 0.4s;
+}
+
+.animate-rain-delay-2 {
+  animation: rain 0.9s linear infinite;
+  animation-delay: 0.2s;
+}
+
+.animate-snow {
+  animation: snow 2.5s linear infinite;
+}
+
+.animate-snow-delay-1 {
+  animation: snow 2s linear infinite;
+  animation-delay: 0.5s;
+}
+
+.animate-snow-delay-2 {
+  animation: snow 3s linear infinite;
+  animation-delay: 1s;
+}
+
+.animate-flash {
+  animation: flash 2s infinite;
+}
+
+/* Fade in animation for page transitions */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Premium Glassmorphism Skeleton & Shimmer Keyframe Declarations */
+.sinan-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+}
+
+.sinan-skeleton::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.04) 20%,
+        rgba(255, 255, 255, 0.12) 60%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    animation: sinan-shimmer 2.2s infinite ease-in-out;
+    content: '';
+}
+
+@keyframes sinan-shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
