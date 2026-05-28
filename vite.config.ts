@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: {
             // Core React Vendor
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'], // react-router is likely used if LocationSearchPage is a route, or just for future proofs
+            'vendor-react': ['react', 'react-dom'],
 
             // Visualization Heavyweights (Lazy Loaded)
             'vendor-charts': ['recharts'],
