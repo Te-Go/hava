@@ -1,0 +1,53 @@
+name: Production CI/CD Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the latest code from GitHub
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Set up Node.js for Vite compilation
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      # 3. Install React and Vite dependencies
+      - name: Install Dependencies
+        run: npm ci
+
+      # 4. Compile React assets into production minified files
+      - name: Compile Assets
+        run: npm run build
+
+      # 5. Deploy files securely to Hostinger via SFTP
+      - name: Deploy to Hostinger SSD
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          port: 21
+          local-dir: ./
+          # Deploy directly to the self-contained plugin folder on Hostinger
+          server-dir: /public_html/wp-content/plugins/tedder-weather-engine/
+          # Exclude development files to keep the server clean
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/src/**
+            README.md
+            package-lock.json
+            package.json
+            tsconfig.json
+            vite.config.ts
