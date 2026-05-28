@@ -30,17 +30,14 @@ export default defineConfig(({ mode }) => {
       react(),
       // analyze({ summaryOnly: true }) // Optional: Uncomment to see bundle size in terminal
     ],
+    esbuild: {
+      drop: mode === 'production' ? ['console', 'debugger'] : [],
+    },
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false, // Disable source maps for production to save space
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-        },
-      },
+      minify: 'esbuild', // Use native, high-performance esbuild minification
       manifest: true, // Enable manifest for PHP integration
       rollupOptions: {
         output: {
@@ -53,7 +50,7 @@ export default defineConfig(({ mode }) => {
             'vendor-maps': ['leaflet', 'react-leaflet'],
 
             // UI Utilities
-            'vendor-ui': ['lucide-react', 'framer-motion'],
+            'vendor-ui': ['lucide-react'],
 
             // Core Utilities (Moment, etc if used, otherwise grouping helpers)
             // 'vendor-utils': ['axios', 'date-fns'] // Example
