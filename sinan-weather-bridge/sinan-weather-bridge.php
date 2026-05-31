@@ -17,18 +17,19 @@ class SinanWeatherBridge
 
     public function __construct()
     {
-        $this->plugin_path = plugin_dir_path(__FILE__);
-        $this->plugin_url = plugin_dir_url(__FILE__);
+        $this->plugin_path = dirname(plugin_dir_path(__FILE__)) . '/';
+        $this->plugin_url = dirname(plugin_dir_url(__FILE__)) . '/';
 
         // dist/ is expected to be inside the plugin folder
-        $this->manifest_path = $this->plugin_path . 'assets/.vite/manifest.json';
+        $this->manifest_path = $this->plugin_path . 'dist/.vite/manifest.json';
         if (!file_exists($this->manifest_path)) {
-            // Fallback for older Vite versions or flat structure
-            $this->manifest_path = $this->plugin_path . 'assets/manifest.json';
+            // Fallback for flat structure
+            $this->manifest_path = $this->plugin_path . 'dist/manifest.json';
         }
 
         // 1. Register Shortcode
         add_shortcode('sinan_weather_app', [$this, 'render_react_root']);
+        add_shortcode('tedder_weather_hub', [$this, 'render_react_root']);
 
         // 2. Register Rewrite Rules
         add_action('init', [$this, 'add_rewrite_rules']);
@@ -77,22 +78,35 @@ class SinanWeatherBridge
     public function enqueue_react_assets()
     {
         global $post;
-        if (!is_a($post, 'WP_Post') || !has_shortcode($post->post_content, 'sinan_weather_app')) {
+        if (!is_a($post, 'WP_Post') || (!has_shortcode($post->post_content, 'sinan_weather_app') && !has_shortcode($post->post_content, 'tedder_weather_hub'))) {
             return;
         }
+
+        // Dequeue competing legacy scripts and styles enqueued by stale WPCode database snippets
+        wp_dequeue_style('tedder-weather-css');
+        wp_deregister_style('tedder-weather-css');
+
+        wp_dequeue_script('react-core');
+        wp_deregister_script('react-core');
+
+        wp_dequeue_script('recharts');
+        wp_deregister_script('recharts');
+
+        wp_dequeue_script('tedder-weather-js');
+        wp_deregister_script('tedder-weather-js');
 
         $assets = $this->get_assets_from_manifest();
 
         // Enqueue CSS
         if (!empty($assets['css'])) {
             foreach ($assets['css'] as $css_file) {
-                wp_enqueue_style('weather-app-style-' . md5($css_file), $this->plugin_url . 'assets/' . $css_file);
+                wp_enqueue_style('weather-app-style-' . md5($css_file), $this->plugin_url . 'dist/' . $css_file);
             }
         }
 
         // Enqueue JS (Main Entry)
         if (!empty($assets['file'])) {
-            wp_enqueue_script('weather-app-main', $this->plugin_url . 'assets/' . $assets['file'], [], null, true);
+            wp_enqueue_script('weather-app-main', $this->plugin_url . 'dist/' . $assets['file'], [], null, true);
         }
 
         // Pass Data to React

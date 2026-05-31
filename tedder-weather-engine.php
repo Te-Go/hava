@@ -1,6 +1,10 @@
 <?php
 /**
- * TEDDER WEATHER ENGINE (SEO CORE)
+ * Plugin Name: Tedder Weather Engine
+ * Description: Core SEO and React Weather Hub Integration Engine.
+ * Version: 22.12
+ * Author: TG Dijital
+ * Text Domain: tedder-weather-engine
  * 
  * Responsible for:
  * 1. Freshness Engine: Programmatic `lastmod` updates based on significant weather changes.
@@ -254,3 +258,6 @@ function tedder_route_weather_template($template) {
     return $template;
 }
 add_filter('template_include', 'tedder_route_weather_template');
+
+// Load the Weather Bridge integration
+require_once plugin_dir_path(__FILE__) . 'sinan-weather-bridge/sinan-weather-bridge.php';
