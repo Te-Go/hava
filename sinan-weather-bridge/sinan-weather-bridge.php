@@ -35,8 +35,8 @@ class SinanWeatherBridge
         add_action('init', [$this, 'add_rewrite_rules']);
         add_filter('query_vars', [$this, 'add_query_vars']);
 
-        // 3. Enqueue Assets (Only on Weather Page)
-        add_action('wp_enqueue_scripts', [$this, 'enqueue_react_assets']);
+        // 3. Enqueue Assets (Only on Weather Page) - Late priority to override database snippets enqueues
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_react_assets'], 9999);
 
         // 4. SEO Injection
         add_action('wp_head', [$this, 'render_seo_meta'], 1);
@@ -78,7 +78,27 @@ class SinanWeatherBridge
     public function enqueue_react_assets()
     {
         global $post;
-        if (!is_a($post, 'WP_Post') || (!has_shortcode($post->post_content, 'sinan_weather_app') && !has_shortcode($post->post_content, 'tedder_weather_hub'))) {
+
+        $should_enqueue = false;
+
+        // 1. Enqueue on Homepage (Front Page)
+        if (is_front_page() || is_home()) {
+            $should_enqueue = true;
+        }
+
+        // 2. Enqueue on Weather subpages
+        if (is_page('hava-durumu')) {
+            $should_enqueue = true;
+        }
+
+        // 3. Fallback: Check shortcodes in main post content
+        if (is_a($post, 'WP_Post')) {
+            if (has_shortcode($post->post_content, 'sinan_weather_app') || has_shortcode($post->post_content, 'tedder_weather_hub')) {
+                $should_enqueue = true;
+            }
+        }
+
+        if (!$should_enqueue) {
             return;
         }
 
