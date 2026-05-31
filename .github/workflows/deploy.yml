@@ -54,3 +54,15 @@ jobs:
             package.json
             tsconfig.json
             vite.config.ts
+            generatepress_child/**
+
+      # 6. Deploy GeneratePress Child Theme to Hostinger
+      - name: Deploy Child Theme
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          port: 21
+          local-dir: ./generatepress_child/
+          server-dir: /public_html/wp-content/themes/generatepress_child/
