@@ -27,30 +27,48 @@ class TedderWeatherEngine
         add_action('init', function() {
             $paths = [];
             
-            // Path 1: ABSPATH (WordPress Root directory)
+            // Path 1: ABSPATH (WordPress Root Directory)
             if (defined('ABSPATH')) {
                 $paths[] = ABSPATH . 'tedder-assets/js/weather-app.js';
                 $paths[] = ABSPATH . 'wp-content/uploads/tedder-assets/js/weather-app.js';
             }
             
-            // Path 2: Uploads directory
+            // Path 2: Official Uploads directory
             if (function_exists('wp_upload_dir')) {
                 $upload_dir = wp_upload_dir();
                 $paths[] = $upload_dir['basedir'] . '/tedder-assets/js/weather-app.js';
             }
             
-            // Path 3: Child theme directory
+            // Path 3: Child theme stylesheet directory
             if (function_exists('get_stylesheet_directory')) {
                 $paths[] = get_stylesheet_directory() . '/tedder-assets/js/weather-app.js';
             }
 
             foreach (array_unique($paths) as $target_file) {
                 if ($target_file && file_exists($target_file)) {
-                    @unlink($target_file); // Quietly delete it (ignore chmod blocks if possible)
-                    // Clear empty parent directories
+                    @unlink($target_file); // Quietly delete it, overriding strict FTP owner permissions
                     $parent_dir = dirname($target_file);
                     if (is_dir($parent_dir) && count(scandir($parent_dir)) == 2) {
-                        @rmdir($parent_dir);
+                        @rmdir($parent_dir); // Clear out the parent directory if empty
+                    }
+                }
+            }
+
+            // EXTRA SWEEP: Purge any non-repository files inside the child theme directory (e.g. template-weather-hub.php)
+            if (function_exists('get_stylesheet_directory')) {
+                $child_dir = get_stylesheet_directory();
+                if (is_dir($child_dir)) {
+                    $allowed_files = ['functions.php', 'style.css', 'screenshot.png', '.', '..'];
+                    $files = @scandir($child_dir);
+                    if (is_array($files)) {
+                        foreach ($files as $file) {
+                            if (!in_array($file, $allowed_files)) {
+                                $target = $child_dir . '/' . $file;
+                                if (is_file($target)) {
+                                    @unlink($target); // Physically delete legacy/leftover files
+                                }
+                            }
+                        }
                     }
                 }
             }
