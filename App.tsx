@@ -586,10 +586,15 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       isMounted = false;
       abortController.abort();
     };
-  }, [currentCity, view.type]);
+  }, [currentCity, view.type, payload]);
 
   useEffect(() => {
-    // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
+    // SINAN CITY MEMORY REDIRECT STORAGE
+    const prefs = getUserPreferences();
+    if (prefs.consentStatus === 'accepted') {
+      localStorage.setItem('sinan_last_city', toSlug(currentCity));
+    }
+
     // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
     // SINAN FIX: Ensure we only switch theme if the data matches the CURRENT city (prevents stale data flash)
     if (weatherData && !isManualTheme && !loading && toSlug(weatherData.city) === toSlug(currentCity)) {

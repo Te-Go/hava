@@ -48,3 +48,24 @@ function generatepress_child_enqueue_styles() {
         }
     }
 }
+
+// SINAN: Client-Side Redirect Interceptor for KVKK/GDPR compliant local dashboard routing
+add_action('wp_head', 'tedder_city_memory_redirect', 5);
+function tedder_city_memory_redirect() {
+    // Only run this intercept on the exact root hub URL
+    if ( is_page('hava-durumu') && !get_query_var('weather_city') ) {
+        ?>
+        <script>
+            (function() {
+                // 1. Check if the user has a saved city in their browser
+                var lastCity = localStorage.getItem('sinan_last_city');
+                
+                // 2. If it exists, immediately route them to their local hub
+                if (lastCity) {
+                    window.location.replace('/hava-durumu/' + lastCity + '/');
+                }
+            })();
+        </script>
+        <?php
+    }
+}
