@@ -38,11 +38,55 @@ class SinanWeatherBridge
         // 3. Enqueue Assets (Only on Weather Page) - Late priority to override database snippets enqueues
         add_action('wp_enqueue_scripts', [$this, 'enqueue_react_assets'], 9999);
 
-        // 4. SEO Injection
+        // 4. SEO Injection & Payload Injection
         add_action('wp_head', [$this, 'render_seo_meta'], 1);
+        add_action('wp_head', [$this, 'inject_weather_payload'], 5); // Avoids wpautop
 
         // 5. Cache Purge Hook (LiteSpeed)
         add_action('litespeed_purge_post', [$this, 'trigger_litespeed_purge']);
+
+        // 6. SEO 404 Leak Prevention
+        add_action('template_redirect', [$this, 'force_200_header']);
+
+        // 7. DB Query Optimization
+        add_action('pre_get_posts', [$this, 'short_circuit_db_queries']);
+    }
+
+    public function force_200_header() {
+        if (get_query_var('city_slug') || get_query_var('weather_city')) {
+            global $wp_query;
+            $wp_query->is_404 = false;
+            status_header(200);
+        }
+    }
+
+    public function short_circuit_db_queries($query) {
+        if (!is_admin() && $query->is_main_query()) {
+            if ($query->get('city_slug') || $query->get('weather_city') || $query->get('pagename') === 'hava-durumu') {
+                $query->set('no_found_rows', true);
+                $query->set('update_post_meta_cache', false);
+                $query->set('update_post_term_cache', false);
+            }
+        }
+    }
+
+    public function inject_weather_payload() {
+        if (!is_page('hava-durumu') && !get_query_var('city_slug') && !get_query_var('weather_city')) return;
+
+        $city_slug = get_query_var('city_slug') ?: get_query_var('weather_city') ?: 'istanbul';
+        $view = get_query_var('weather_view') ?: 'home';
+        $city_display = $this->format_city_name($city_slug);
+        
+        $weather_data = [
+            'city' => $city_display,
+            'view' => $view
+        ];
+        
+        ?>
+        <script data-no-optimize="1">
+            window.SinanWeatherPayload = <?php echo json_encode($weather_data); ?>;
+        </script>
+        <?php
     }
 
     /**
@@ -215,9 +259,6 @@ class SinanWeatherBridge
         $output .= '<span style="color:#666;">Yükleniyor...</span></div>';
 
         $output .= '</div>';
-
-        // Inject Config Check
-        $output .= '<script>window.INITIAL_WEATHER_DATA = ' . json_encode($initial_data) . ';</script>';
 
         return $output;
     }
