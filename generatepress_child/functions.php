@@ -69,3 +69,28 @@ function tedder_city_memory_redirect() {
         <?php
     }
 }
+
+/**
+ * Prevent WordPress from hijacking our virtual React routes.
+ * Disables canonical URL guessing for any path under /hava-durumu/
+ */
+add_filter( 'redirect_canonical', 'tedder_disable_url_guessing', 10, 2 );
+function tedder_disable_url_guessing( $redirect_url, $requested_url ) {
+    // If the user is requesting a URL inside our weather app
+    if ( strpos( $requested_url, '/hava-durumu/' ) !== false ) {
+        return false; // Block WordPress from redirecting to random blog posts
+    }
+    return $redirect_url;
+}
+
+add_action('init', function() {
+    // Register the virtual city parameter
+    add_rewrite_tag('%weather_city%', '([^&]+)');
+    
+    // Catch the URL and route it to the base hava-durumu page
+    add_rewrite_rule(
+        '^hava-durumu/([^/]+)/?$',
+        'index.php?pagename=hava-durumu&weather_city=$matches[1]',
+        'top'
+    );
+});
