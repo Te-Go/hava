@@ -23,21 +23,38 @@ class TedderWeatherEngine
     {
         $this->log_file = dirname(__FILE__) . '/seo_events.log';
 
-        // SERVER-SIDE CLEANUP: Delete the stale crashing weather-app.js from Hostinger uploads
+        // SERVER-SIDE CLEANUP: Delete the stale crashing weather-app.js from all possible directories
         add_action('init', function() {
+            $paths = [];
+            
+            // Path 1: ABSPATH (WordPress Root directory)
+            if (defined('ABSPATH')) {
+                $paths[] = ABSPATH . 'tedder-assets/js/weather-app.js';
+                $paths[] = ABSPATH . 'wp-content/uploads/tedder-assets/js/weather-app.js';
+            }
+            
+            // Path 2: Uploads directory
             if (function_exists('wp_upload_dir')) {
                 $upload_dir = wp_upload_dir();
-                $target_file = $upload_dir['basedir'] . '/tedder-assets/js/weather-app.js';
-                if (file_exists($target_file)) {
-                    unlink($target_file);
-                    // Clean up empty directory if applicable
-                    $target_dir = $upload_dir['basedir'] . '/tedder-assets/js';
-                    if (is_dir($target_dir) && count(scandir($target_dir)) == 2) {
-                        rmdir($target_dir);
+                $paths[] = $upload_dir['basedir'] . '/tedder-assets/js/weather-app.js';
+            }
+            
+            // Path 3: Child theme directory
+            if (function_exists('get_stylesheet_directory')) {
+                $paths[] = get_stylesheet_directory() . '/tedder-assets/js/weather-app.js';
+            }
+
+            foreach (array_unique($paths) as $target_file) {
+                if ($target_file && file_exists($target_file)) {
+                    @unlink($target_file); // Quietly delete it (ignore chmod blocks if possible)
+                    // Clear empty parent directories
+                    $parent_dir = dirname($target_file);
+                    if (is_dir($parent_dir) && count(scandir($parent_dir)) == 2) {
+                        @rmdir($parent_dir);
                     }
                 }
             }
-        });
+        }, 1);
     }
 
     /**

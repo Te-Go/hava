@@ -280,7 +280,8 @@ new SinanWeatherBridge();
  */
 class Tedder_Legacy_Script_Shield {
     public static function init() {
-        add_action('template_redirect', [self::class, 'start_buffer'], 0);
+        // Run at priority 0 during init to start output buffering before any HTML rendering begins
+        add_action('init', [self::class, 'start_buffer'], 0);
     }
 
     public static function start_buffer() {
@@ -295,13 +296,13 @@ class Tedder_Legacy_Script_Shield {
         }
 
         // Target the hardcoded scripts causing the Recharts / Babel / Tailwind clashes
-        // Handles both single quotes, double quotes, and multi-line script tags
+        // Extremely robust patterns handling single/double/no quotes, spaces, and multi-line script tags
         $patterns = [
-            '/<script[^>]*src=["\'][^"\']*?cdn\.tailwindcss\.com[^"\']*?["\'][^>]*>.*?<\/script>/is',
-            '/<script[^>]*src=["\'][^"\']*?babel[^"\']*?\.js[^"\']*?["\'][^>]*>.*?<\/script>/is',
-            '/<script[^>]*src=["\'][^"\']*?weather-app\.js[^"\']*?["\'][^>]*>.*?<\/script>/is',
-            '/<script[^>]*type=["\']text\/babel["\'][^>]*src=["\'][^"\']*?weather-app\.js[^"\']*?["\'][^>]*>.*?<\/script>/is',
-            '/<script[^>]*type=["\']text\/babel["\'][^>]*>.*?<\/script>/is'
+            '/<script[^>]*src\s*=\s*["\']?\s*[^"\'\s>]*?cdn\.tailwindcss\.com[^"\'\s>]*?\s*["\']?[^>]*>.*?<\/script>/is',
+            '/<script[^>]*src\s*=\s*["\']?\s*[^"\'\s>]*?babel[^"\'\s>]*?\s*["\']?[^>]*>.*?<\/script>/is',
+            '/<script[^>]*src\s*=\s*["\']?\s*[^"\'\s>]*?weather-app\.js[^"\'\s>]*?\s*["\']?[^>]*>.*?<\/script>/is',
+            '/<script[^>]*type\s*=\s*["\']?\s*text\/babel\s*["\']?[^>]*src\s*=\s*["\']?\s*[^"\'\s>]*?weather-app\.js[^"\'\s>]*?\s*["\']?[^>]*>.*?<\/script>/is',
+            '/<script[^>]*type\s*=\s*["\']?\s*text\/babel\s*["\']?[^>]*>.*?<\/script>/is'
         ];
 
         return preg_replace($patterns, '', $html);
