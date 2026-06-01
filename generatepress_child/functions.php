@@ -13,10 +13,8 @@ function generatepress_child_enqueue_styles() {
     // Enqueue Child Theme Style
     wp_enqueue_style( 'generatepress-child-style', get_stylesheet_directory_uri() . '/style.css', array( 'generatepress-parent-style' ) );
     
-    // Check if we are on the Weather Hub Virtual Page (or any page using the hub)
-    // Actually we will just enqueue it globally or check for 'weather_city'
-    // To be safe and let React hydration run on targeted pages only:
-    if (get_query_var('weather_city') || is_page('hava-durumu')) {
+    // Check if the current view is using our programmatic weather hub template
+    if ( is_page_template('template-weather-hub.php') || get_query_var('weather_city') || is_page('hava-durumu') ) {
         $js_file = get_stylesheet_directory() . '/dist/bundle.js';
         $js_uri  = get_stylesheet_directory_uri() . '/dist/bundle.js';
         
