@@ -99,6 +99,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 interface AppProps {
   locationId?: number;
+  payload?: any;
 }
 
 // SINAN FIREWALL: Reserved paths that should NEVER be treated as cities
@@ -112,7 +113,7 @@ const RESERVED_PATHS = [
   'sehirler' // Cities index page
 ];
 
-const App: React.FC<AppProps> = ({ locationId = 0 }) => {
+const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
   // BULLETPROOF HYDRATION LOGIC
   const getInitialState = (): { city: string; view: ViewState['type']; parentCity?: string } => {
@@ -562,156 +563,25 @@ const App: React.FC<AppProps> = ({ locationId = 0 }) => {
     let isMounted = true;
 
     const fetchData = async () => {
-      setLoading(true);
-      try {
-        const wData = await getWeatherData(currentCity);
-
-        // Only update state if this request is still relevant
-        if (isMounted && !abortController.signal.aborted) {
-          if (wData?.daily && wData?.hourly) {
-            setWeatherData(wData);
-
-            // SINAN FETCH ISLANDS
-            const citySlug = toSlug(currentCity);
-
-            // 1. Reset islands
-            setMarineData(null);
-            setTrafficData(null);
-            setSkiData(null);
-            setAgricultureData(null);
-            setAltitudeData(null);
-            setFireRiskData(null);
-            setTourismData(null);
-
-            // 2. Traffic (Metro or Hub) - Now covers 29 cities
-            if (hasTrafficMonitoring(citySlug)) {
-              fetchTrafficData(citySlug, TOMTOM_API_KEY).then(data => {
-                if (isMounted) {
-                  setTrafficData(data);
-                  setTrafficCityDisplay(undefined); // Local
-                }
-              }).catch(err => console.error("Traffic Fetch Error", err));
-            } else {
-              // Check for Regional Hub Traffic
-              const hub = findNearestHub(wData.coord?.lat || 0, wData.coord?.lon || 0, 'traffic');
-              if (hub) {
-                fetchTrafficData(hub.hub.id, TOMTOM_API_KEY).then(data => {
-                  if (isMounted) {
-                    setTrafficData(data);
-                    setTrafficCityDisplay(`${hub.hub.name} Bölgesi`);
-                  }
-                }).catch(err => console.error("Regional Traffic Fetch Error", err));
-              }
-            }
-
-            // 3. Marine (Coastal or Hub)
-            if (isCoastalCity(citySlug)) {
-              fetchMarineData(citySlug).then(data => {
-                if (isMounted) {
-                  setMarineData(data);
-                  setMarineCityDisplay(undefined);
-                }
-              }).catch(err => console.error("Marine Fetch Error", err));
-            } else {
-              // Check for Regional Hub Marine
-              const hub = findNearestHub(wData.coord?.lat || 0, wData.coord?.lon || 0, 'marine');
-              if (hub) {
-                fetchMarineData(hub.hub.id).then(data => {
-                  if (isMounted) {
-                    setMarineData(data);
-                    setMarineCityDisplay(`${hub.hub.name} Bölgesi`);
-                  }
-                }).catch(err => console.error("Regional Marine Fetch Error", err));
-              }
-            }
-
-            // 4. Ski (Mountain)
-            if (hasSkiResort(citySlug)) {
-              const skiCityKey = resolveSkiCityKey(citySlug);
-              import('./services/weatherUnlockedSkiService').then(({ fetchWeatherUnlockedSki }) => {
-                fetchWeatherUnlockedSki(skiCityKey).then(data => {
-                  if (isMounted && data) setSkiData(data);
-                }).catch(err => console.error("Ski Fetch Error", err));
-              });
-            }
-
-            // 5-8. New Island Categories
-            // Primary category determines the "main" extended island
-            // Secondary categories are ALSO loaded if applicable
-            const islandCategory = getIslandCategory(currentCity);
-            const primaryCategory = islandCategory.primary;
-            const secondaryCategory = islandCategory.secondary;
-
-            // Determine if raining (for agriculture advice)
-            const isRaining = (wData.rainVolume > 0) || (wData.hourly[0]?.precipitation || 0) > 0;
-
-            // Load primary extended category
-            if (primaryCategory === 'agriculture') {
-              fetchAgricultureData(wData.coord?.lat || 39, wData.coord?.lon || 35, isRaining).then(data => {
-                if (isMounted && data) setAgricultureData(data);
-              }).catch(err => console.error("Agriculture Fetch Error", err));
-            } else if (primaryCategory === 'altitude') {
-              const elevation = getProvinceElevation(currentCity);
-              const altData = calculateAltitudeData(
-                elevation,
-                wData.currentTemp,
-                wData.feelsLike,
-                wData.daily.map(d => d.low),
-                wData.windSpeed,
-                wData.hourly[0]?.precipitation || 0
-              );
-              if (isMounted) setAltitudeData(altData);
-            } else if (primaryCategory === 'fireRisk') {
-              if (shouldShowFireRisk()) {
-                const precipSum = wData.daily.slice(0, 7).reduce((sum, d) => sum + (d.precipitationSum || 0), 0);
-                const fireData = calculateFireRisk(
-                  wData.humidity,
-                  wData.windSpeed,
-                  wData.currentTemp,
-                  precipSum
-                );
-                if (isMounted) setFireRiskData(fireData);
-              }
-            }
-
-            // ALSO load Agriculture if it's the secondary category (e.g., Konya, Ankara)
-            if (secondaryCategory === 'agriculture' && primaryCategory !== 'agriculture') {
-              fetchAgricultureData(wData.coord?.lat || 39, wData.coord?.lon || 35, isRaining).then(data => {
-                if (isMounted && data) setAgricultureData(data);
-              }).catch(err => console.error("Secondary Agriculture Fetch Error", err));
-            }
-
-            // ALWAYS load Tourism if city is a tourism hotspot (regardless of primary category)
-            // This allows Istanbul, Antalya, Muğla etc. to show BOTH Traffic/Marine AND Tourism
-            if (isTourismRegion(currentCity)) {
-              const tourData = calculateTourismComfort(
-                wData.currentTemp,
-                wData.humidity,
-                wData.hourly[0]?.uvIndex ?? 5,
-                currentCity
-              );
-              if (isMounted) setTourismData(tourData);
-            }
-          } else {
-            setWeatherData(null);
-          }
-        }
-      } catch (e) {
-        if (e instanceof Error && e.name === 'AbortError') return;
-        if (isMounted) {
-          console.error("Weather Fetch Failed", e);
-          setWeatherData(null);
-        }
+      if (payload && payload.weatherData) {
+        setWeatherData(payload.weatherData);
+        setTrafficData(payload.weatherData.trafficData || null);
+        setMarineData(payload.weatherData.marineData || null);
+        setSkiData(payload.weatherData.skiData || null);
+        setAgricultureData(payload.weatherData.agricultureData || null);
+        setAltitudeData(payload.weatherData.altitudeData || null);
+        setFireRiskData(payload.weatherData.fireRiskData || null);
+        setTourismData(payload.weatherData.tourismData || null);
+        setLoading(false);
+        return;
       }
-      if (isMounted) setLoading(false);
+      setLoading(false);
     };
 
-    // Only fetch if we are in a main weather view
     if (view.type === 'home' || view.type === 'tomorrow' || view.type === '15-days') {
       fetchData();
     }
 
-    // Cleanup: abort pending request and mark as unmounted
     return () => {
       isMounted = false;
       abortController.abort();

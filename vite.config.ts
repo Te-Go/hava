@@ -41,20 +41,10 @@ export default defineConfig(({ mode }) => {
       manifest: true, // Enable manifest for PHP integration
       rollupOptions: {
         output: {
-          manualChunks: {
-            // Core React Vendor
-            'vendor-react': ['react', 'react-dom'],
-
-            // Visualization Heavyweights (Lazy Loaded)
-            'vendor-charts': ['recharts'],
-            'vendor-maps': ['leaflet', 'react-leaflet'],
-
-            // UI Utilities
-            'vendor-ui': ['lucide-react'],
-
-            // Core Utilities (Moment, etc if used, otherwise grouping helpers)
-            // 'vendor-utils': ['axios', 'date-fns'] // Example
-          }
+          entryFileNames: 'bundle.js',
+          chunkFileNames: '[name].js',
+          assetFileNames: '[name].[ext]',
+          manualChunks: undefined
         }
       }
     },
