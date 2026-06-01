@@ -13,24 +13,24 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup SSH Connection
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add Hostinger Server to Known Hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} -H ${{ secrets.HOSTINGER_HOST }} >> ~/.ssh/known_hosts
-
       - name: Deploy Tedder Weather Engine Plugin
-        run: |
-          rsync -avz --delete -e "ssh -p ${{ secrets.HOSTINGER_PORT }}" \
-          ./wp-content/plugins/tedder-weather-engine/ \
-          ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:public_html/wp-content/plugins/tedder-weather-engine/
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          port: 21
+          local-dir: ./wp-content/plugins/tedder-weather-engine/
+          server-dir: /public_html/wp-content/plugins/tedder-weather-engine/
+          state-name: .ftp-plugin-sync-state.json
 
       - name: Deploy GeneratePress Child Theme
-        run: |
-          rsync -avz --delete -e "ssh -p ${{ secrets.HOSTINGER_PORT }}" \
-          ./wp-content/themes/generatepress-child/ \
-          ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:public_html/wp-content/themes/generatepress-child/
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          port: 21
+          local-dir: ./wp-content/themes/generatepress-child/
+          server-dir: /public_html/wp-content/themes/generatepress-child/
+          state-name: .ftp-theme-sync-state.json
