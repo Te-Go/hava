@@ -259,3 +259,38 @@ class SinanWeatherBridge
 
 // Initialize
 new SinanWeatherBridge();
+
+/**
+ * BRUTE FORCE LEGACY SCRIPTS SHIELD
+ * Intercepts the final rendered HTML and programmatically purges any hardcoded
+ * stale Tailwind CDN, Babel standalone, or old prototype scripts to prevent browser crashes.
+ */
+class Tedder_Legacy_Script_Shield {
+    public static function init() {
+        add_action('template_redirect', [self::class, 'start_buffer'], 0);
+    }
+
+    public static function start_buffer() {
+        if (!is_admin()) {
+            ob_start([self::class, 'clean_html_output']);
+        }
+    }
+
+    public static function clean_html_output($html) {
+        if (empty($html)) {
+            return $html;
+        }
+
+        // Target the hardcoded scripts causing the Recharts / Babel / Tailwind clashes
+        $patterns = [
+            '/<script[^>]*src="[^"]*cdn\.tailwindcss\.com[^"]*"[^>]*><\/script>/is',
+            '/<script[^>]*src="[^"]*babel[^"]*\.js[^"]*"[^>]*><\/script>/is',
+            '/<script[^>]*src="[^"]*weather-app\.js[^"]*"[^>]*><\/script>/is',
+            '/<script[^>]*type="text\/babel"[^>]*src="[^"]*weather-app\.js[^"]*"[^>]*><\/script>/is',
+            '/<script[^>]*type="text\/babel"[^>]*>.*?<\/script>/is'
+        ];
+
+        return preg_replace($patterns, '', $html);
+    }
+}
+Tedder_Legacy_Script_Shield::init();
