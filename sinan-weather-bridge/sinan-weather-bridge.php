@@ -115,6 +115,19 @@ class SinanWeatherBridge
         wp_dequeue_script('tedder-weather-js');
         wp_deregister_script('tedder-weather-js');
 
+        // Robust fallback: Dequeue all possible custom script handle variations
+        wp_dequeue_script('weather-app');
+        wp_deregister_script('weather-app');
+
+        wp_dequeue_script('weather-app-js');
+        wp_deregister_script('weather-app-js');
+
+        wp_dequeue_script('weather-js');
+        wp_deregister_script('weather-js');
+
+        wp_dequeue_script('tedder-weather');
+        wp_deregister_script('tedder-weather');
+
         $assets = $this->get_assets_from_manifest();
 
         // Enqueue CSS
@@ -282,12 +295,13 @@ class Tedder_Legacy_Script_Shield {
         }
 
         // Target the hardcoded scripts causing the Recharts / Babel / Tailwind clashes
+        // Handles both single quotes, double quotes, and multi-line script tags
         $patterns = [
-            '/<script[^>]*src="[^"]*cdn\.tailwindcss\.com[^"]*"[^>]*><\/script>/is',
-            '/<script[^>]*src="[^"]*babel[^"]*\.js[^"]*"[^>]*><\/script>/is',
-            '/<script[^>]*src="[^"]*weather-app\.js[^"]*"[^>]*><\/script>/is',
-            '/<script[^>]*type="text\/babel"[^>]*src="[^"]*weather-app\.js[^"]*"[^>]*><\/script>/is',
-            '/<script[^>]*type="text\/babel"[^>]*>.*?<\/script>/is'
+            '/<script[^>]*src=["\'][^"\']*?cdn\.tailwindcss\.com[^"\']*?["\'][^>]*>.*?<\/script>/is',
+            '/<script[^>]*src=["\'][^"\']*?babel[^"\']*?\.js[^"\']*?["\'][^>]*>.*?<\/script>/is',
+            '/<script[^>]*src=["\'][^"\']*?weather-app\.js[^"\']*?["\'][^>]*>.*?<\/script>/is',
+            '/<script[^>]*type=["\']text\/babel["\'][^>]*src=["\'][^"\']*?weather-app\.js[^"\']*?["\'][^>]*>.*?<\/script>/is',
+            '/<script[^>]*type=["\']text\/babel["\'][^>]*>.*?<\/script>/is'
         ];
 
         return preg_replace($patterns, '', $html);
