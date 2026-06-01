@@ -31,6 +31,6 @@ jobs:
           username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
           port: 21
-          local-dir: ./wp-content/themes/generatepress-child/
-          server-dir: /public_html/wp-content/themes/generatepress-child/
+          local-dir: ./wp-content/themes/generatepress_child/
+          server-dir: /public_html/wp-content/themes/generatepress_child/
           state-name: .ftp-theme-sync-state.json
