@@ -22,6 +22,22 @@ class TedderWeatherEngine
     public function __construct()
     {
         $this->log_file = dirname(__FILE__) . '/seo_events.log';
+
+        // SERVER-SIDE CLEANUP: Delete the stale crashing weather-app.js from Hostinger uploads
+        add_action('init', function() {
+            if (function_exists('wp_upload_dir')) {
+                $upload_dir = wp_upload_dir();
+                $target_file = $upload_dir['basedir'] . '/tedder-assets/js/weather-app.js';
+                if (file_exists($target_file)) {
+                    unlink($target_file);
+                    // Clean up empty directory if applicable
+                    $target_dir = $upload_dir['basedir'] . '/tedder-assets/js';
+                    if (is_dir($target_dir) && count(scandir($target_dir)) == 2) {
+                        rmdir($target_dir);
+                    }
+                }
+            }
+        });
     }
 
     /**
