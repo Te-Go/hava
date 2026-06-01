@@ -1,68 +1,36 @@
-name: Production CI/CD Deployment
+name: Automated Hostinger Deployment
 
 on:
   push:
     branches:
-      - main
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      - main # Triggers the deployment every time code is pushed to the main branch
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout the latest code from GitHub
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Set up Node.js for Vite compilation
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Setup SSH Connection
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          node-version: 18
-          cache: 'npm'
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 3. Install React and Vite dependencies
-      - name: Install Dependencies
-        run: npm ci
+      - name: Add Hostinger Server to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.HOSTINGER_PORT }} -H ${{ secrets.HOSTINGER_HOST }} >> ~/.ssh/known_hosts
 
-      # 4. Compile React assets into production minified files
-      - name: Compile Assets
-        run: npm run build
+      - name: Deploy Tedder Weather Engine Plugin
+        run: |
+          rsync -avz --delete -e "ssh -p ${{ secrets.HOSTINGER_PORT }}" \
+          ./wp-content/plugins/tedder-weather-engine/ \
+          ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:public_html/wp-content/plugins/tedder-weather-engine/
 
-      # 5. Deploy files securely to Hostinger via SFTP
-      - name: Deploy to Hostinger SSD
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          port: 21
-          local-dir: ./
-          # Deploy directly to the self-contained plugin folder on Hostinger
-          server-dir: /public_html/wp-content/plugins/tedder-weather-engine/
-          # Exclude development files to keep the server clean
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/src/**
-            README.md
-            package-lock.json
-            package.json
-            tsconfig.json
-            vite.config.ts
-            generatepress_child/**
-
-      # 6. Deploy GeneratePress Child Theme to Hostinger
-      - name: Deploy Child Theme
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          port: 21
-          local-dir: ./generatepress_child/
-          server-dir: /public_html/wp-content/themes/generatepress_child/
+      - name: Deploy GeneratePress Child Theme
+        run: |
+          rsync -avz --delete -e "ssh -p ${{ secrets.HOSTINGER_PORT }}" \
+          ./wp-content/themes/generatepress-child/ \
+          ${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}:public_html/wp-content/themes/generatepress-child/
