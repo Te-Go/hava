@@ -636,9 +636,13 @@ export const fromSlug = (slug: string): string => {
 
 // --- GEOCODING FALLBACK ---
 const fetchGeocoding = async (city: string) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 Seconds strict timeout
+
   try {
     const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=tr&format=json`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await res.json();
     if (data.results && data.results.length > 0) {
       return {
@@ -647,7 +651,10 @@ const fetchGeocoding = async (city: string) => {
         name: data.results[0].name
       };
     }
-  } catch (e) { console.error(e); }
+  } catch (e) {
+    clearTimeout(timeoutId);
+    console.error("Geocoding fetch failed or timed out:", e);
+  }
   return null;
 };
 
@@ -684,8 +691,12 @@ export const searchLocations = async (query: string): Promise<GeoSearchResult[]>
 // --- REVERSE GEOCODING (Enhanced with fallbacks) ---
 // Returns the best available locality name for given coordinates
 export const getCityFromCoords = async (lat: number, lon: number): Promise<string> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 Seconds strict timeout
+
   try {
-    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=tr`);
+    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=tr`, { signal: controller.signal });
+    clearTimeout(timeoutId);
     const data = await res.json();
 
     // Cascading fallback chain for best locality name
@@ -705,7 +716,8 @@ export const getCityFromCoords = async (lat: number, lon: number): Promise<strin
       return geoData.name;
     }
   } catch (e) {
-    console.warn("Reverse geocoding failed", e);
+    clearTimeout(timeoutId);
+    console.warn("Reverse geocoding failed or timed out:", e);
   }
 
   // Last resort: Return coordinate display
@@ -861,15 +873,9 @@ export const calculateLifestyleIndexes = (data: WeatherData): LifestyleIndex[] =
   return indexes;
 };
 
-// --- OPENAQ AIR QUALITY API ---
-// Free API for real AQI data by coordinates
-// Docs: https://docs.openaq.org/
-
-interface OpenAQMeasurement {
-  parameter: string;
-  value: number;
-  unit: string;
-}
+// --- OPEN-METEO AIR QUALITY API (REPLACEMENT FOR RETIRED OPENAQ) ---
+// Keyless, high-performance API for Air Quality Index
+// Docs: https://open-meteo.com/en/docs/air-quality-api
 
 const fetchAirQuality = async (lat: number, lon: number): Promise<number> => {
   // Use Cache Wrapper: 60 Minutes TTL
@@ -878,43 +884,36 @@ const fetchAirQuality = async (lat: number, lon: number): Promise<number> => {
   return fetchWithCache(
     cacheKey,
     async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 Seconds strict timeout
+
       try {
-        // OpenAQ v2 API - find nearest measurements
-        const url = `https://api.openaq.org/v2/latest?coordinates=${lat},${lon}&radius=25000&limit=1`;
+        // Use Open-Meteo Air Quality API - free, keyless, and ultra-fast
+        const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=us_aqi&forecast_days=1`;
         const response = await fetch(url, {
+          signal: controller.signal,
           headers: { 'Accept': 'application/json' }
         });
 
-        if (!response.ok) throw new Error('OpenAQ request failed');
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error('Open-Meteo AQI request failed');
 
         const data = await response.json();
 
-        if (data.results && data.results.length > 0) {
-          const measurements = data.results[0].measurements as OpenAQMeasurement[];
-
-          // Look for PM2.5 or PM10 (common AQI indicators)
-          const pm25 = measurements.find(m => m.parameter === 'pm25');
-          const pm10 = measurements.find(m => m.parameter === 'pm10');
-
-          // Convert PM2.5 to simplified AQI (0-100+ scale)
-          // EPA breakpoints: 0-12 = Good, 12-35 = Moderate, 35-55 = Unhealthy for Sensitive
-          if (pm25) {
-            const value = pm25.value;
-            if (value <= 12) return Math.round(value * 4); // 0-48 (Good)
-            if (value <= 35) return Math.round(50 + (value - 12) * 2); // 50-96 (Moderate)
-            if (value <= 55) return Math.round(100 + (value - 35)); // 100-120 (Unhealthy for Sensitive)
-            return Math.min(Math.round(value * 2), 300); // Scale up for worse conditions
-          }
-
-          // Fallback to PM10 if PM2.5 not available
-          if (pm10) {
-            return Math.min(Math.round(pm10.value / 2), 200);
-          }
+        // Get the current hour's US AQI or first available hourly index
+        if (data.hourly && Array.isArray(data.hourly.us_aqi) && data.hourly.us_aqi.length > 0) {
+          const currentHourStr = new Date().toISOString().substring(0, 13) + ':00';
+          const matchIndex = data.hourly.time.findIndex((t: string) => t.startsWith(currentHourStr.substring(0, 13)));
+          const index = matchIndex !== -1 ? matchIndex : 0;
+          const aqi = data.hourly.us_aqi[index];
+          return typeof aqi === 'number' ? Math.round(aqi) : 40;
         }
 
         return 40; // Default fallback
       } catch (e) {
-        console.warn('OpenAQ fetch failed, using default AQI:', e);
+        clearTimeout(timeoutId);
+        console.warn('Air quality fetch failed or timed out, using default AQI (40):', e);
         return 40; // Fallback to moderate value
       }
     },
