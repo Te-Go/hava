@@ -17,6 +17,10 @@ class SinanWeatherBridge {
      */
     public function short_circuit_db_queries( $query ) {
         if ( ! is_admin() && $query->is_main_query() && get_query_var( 'weather_city' ) ) {
+            // THE CRITICAL FIX: Force the engine to fetch our real "Hava Durumu" page data,
+            // preventing WordPress from failing the query and falling back to the blog post loop.
+            $query->set( 'pagename', 'hava-durumu' ); 
+
             $query->set( 'no_found_rows', true ); // Eliminate dynamic pagination row calculations
             $query->set( 'update_post_meta_cache', false ); // Block dynamic object relation loading
             $query->set( 'update_post_term_cache', false );
