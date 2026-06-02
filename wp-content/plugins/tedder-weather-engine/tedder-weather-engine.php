@@ -310,5 +310,8 @@ function tedder_route_weather_template($template) {
 }
 add_filter('template_include', 'tedder_route_weather_template');
 
-// Load the Weather Bridge integration
+// Load the Centralized Data Engine (Tier 1 Proactive Sync)
+require_once plugin_dir_path(__FILE__) . 'tedder-data-engine.php';
+
+// Load the Weather Bridge integration (Tier 2 Reactive JIT)
 require_once plugin_dir_path(__FILE__) . 'sinan-weather-bridge/sinan-weather-bridge.php';
