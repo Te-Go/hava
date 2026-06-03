@@ -35,6 +35,13 @@ class SinanWeatherBridge {
             global $wp_query;
             $wp_query->is_404 = false; // Block WordPress 404 categorization
             status_header( 200 ); // Command edge servers to process view as 200 OK index
+
+            // Force WordPress to drop the blog archive template and load our clear shell
+            $custom_template = get_stylesheet_directory() . '/template-weather-hub.php';
+            if ( file_exists( $custom_template ) ) {
+                include $custom_template;
+                exit;
+            }
         }
     }
 
