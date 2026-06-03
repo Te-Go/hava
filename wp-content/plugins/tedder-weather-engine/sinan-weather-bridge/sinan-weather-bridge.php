@@ -21,7 +21,7 @@ class SinanWeatherBridge {
 
     // Renders the empty DOM node for React to attach to
     public function render_react_mount() {
-        return '<div id="sinan-weather-root"></div>';
+        return '<div id="weather-app"></div>';
     }
 
     // Completely bypasses WordPress 404s by drawing the page manually and terminating the process
