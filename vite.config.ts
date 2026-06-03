@@ -26,6 +26,8 @@ export default defineConfig(({ mode }) => {
         }
       }
     },
+    // THIS IS THE FIX: Tell Vite exactly where its assets live on the production server
+    base: '/wp-content/themes/generatepress_child/dist/',
     plugins: [
       react(),
       // analyze({ summaryOnly: true }) // Optional: Uncomment to see bundle size in terminal
