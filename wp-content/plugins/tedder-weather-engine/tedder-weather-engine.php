@@ -267,48 +267,7 @@ function tedder_register_query_vars($vars) {
 }
 add_filter('query_vars', 'tedder_register_query_vars');
 
-function tedder_register_weather_rewrites() {
-    add_rewrite_tag('%weather_city%', '([^/]+)');
-    add_rewrite_tag('%weather_district%', '([^/]+)');
-    add_rewrite_tag('%weather_timeframe%', '([^/]+)');
 
-    // Scoped pattern to prevent hijacking standard WordPress category/post loops
-    add_rewrite_rule(
-        '^hava-durumu/([^/]+)/([^/]+)/([^/]+)/?$',
-        'index.php?weather_city=$matches[1]&weather_district=$matches[2]&weather_timeframe=$matches[3]',
-        'top'
-    );
-}
-add_action('init', 'tedder_register_weather_rewrites');
-
-function tedder_route_weather_template($template) {
-    $city = get_query_var('weather_city');
-    $district = get_query_var('weather_district');
-
-    if ($city && $district) {
-        // Enforce clean 200 OK headers to guarantee Googlebot indexing success
-        global $wp_query;
-        $wp_query->is_404 = false;
-        $wp_query->is_single = false;
-        $wp_query->is_page = true;
-        status_header(200);
-
-        // Normalize using TurkishNormalizer to support suffixes
-        $normalized_city = TurkishNormalizer::isolate_lemma($city);
-        $normalized_district = TurkishNormalizer::isolate_lemma($district);
-
-        // Update the query vars with normalized lemmas for engine consumption
-        set_query_var('weather_city', $normalized_city);
-        set_query_var('weather_district', $normalized_district);
-
-        $custom_template = get_stylesheet_directory() . '/template-weather-hub.php';
-        if (file_exists($custom_template)) {
-            return $custom_template;
-        }
-    }
-    return $template;
-}
-add_filter('template_include', 'tedder_route_weather_template');
 
 // Load the Centralized Data Engine (Tier 1 Proactive Sync)
 require_once plugin_dir_path(__FILE__) . 'tedder-data-engine.php';

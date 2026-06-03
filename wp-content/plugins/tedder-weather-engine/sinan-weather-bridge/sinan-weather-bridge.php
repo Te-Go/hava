@@ -7,42 +7,56 @@
 class SinanWeatherBridge {
 
     public function __construct() {
-        add_action( 'pre_get_posts', array( $this, 'short_circuit_db_queries' ) );
-        add_action( 'template_redirect', array( $this, 'force_200_header' ) );
+        // 1. Intercept request early to kill WordPress interference
+        add_action( 'template_redirect', array( $this, 'virtual_route_intercept' ), 1 );
+        
+        // 2. Force WordPress to load our specific template
+        add_filter( 'template_include', array( $this, 'force_weather_template' ), 99 );
+        
+        // 3. Inject payload (Existing Tier 2 JIT Cache logic)
         add_action( 'wp_head', array( $this, 'inject_weather_payload_head' ), 10 );
     }
 
-    /**
-     * 1. Short-Circuit DB Query overhead on dynamic weather parameters
-     */
-    public function short_circuit_db_queries( $query ) {
-        if ( ! is_admin() && $query->is_main_query() && get_query_var( 'weather_city' ) ) {
-            // THE CRITICAL FIX: Force the engine to fetch our real "Hava Durumu" page data,
-            // preventing WordPress from failing the query and falling back to the blog post loop.
-            $query->set( 'pagename', 'hava-durumu' ); 
-
-            $query->set( 'no_found_rows', true ); // Eliminate dynamic pagination row calculations
-            $query->set( 'update_post_meta_cache', false ); // Block dynamic object relation loading
-            $query->set( 'update_post_term_cache', false );
+    public function virtual_route_intercept() {
+        $uri = $_SERVER['REQUEST_URI'];
+        
+        // If the URL contains our app path
+        if ( strpos( $uri, '/hava-durumu' ) !== false ) {
+            // Kill canonical guessing immediately
+            remove_filter( 'template_redirect', 'redirect_canonical' );
+            
+            // Force WordPress to treat this as a successful page load
+            global $wp_query;
+            $wp_query->init(); // Reset the failed query
+            $wp_query->is_404 = false;
+            $wp_query->is_archive = false;
+            $wp_query->is_home = false;
+            $wp_query->is_page = true;
+            status_header( 200 );
+            
+            // Natively extract the location parameter (Supports both City and District)
+            $path = trim( parse_url( $uri, PHP_URL_PATH ), '/' );
+            if ( preg_match( '/hava-durumu\/(.+)/', $path, $matches ) ) {
+                $location_slug = sanitize_text_field( $matches[1] );
+                $parts = explode('/', $location_slug);
+                set_query_var( 'weather_city', $parts[0] );
+                if ( isset( $parts[1] ) ) {
+                    set_query_var( 'weather_district', $parts[1] );
+                }
+            }
         }
     }
 
-    /**
-     * 2. Overrule legacy Soft-404 reporting variables
-     */
-    public function force_200_header() {
-        if ( get_query_var( 'weather_city' ) ) {
-            global $wp_query;
-            $wp_query->is_404 = false; // Block WordPress 404 categorization
-            status_header( 200 ); // Command edge servers to process view as 200 OK index
-
-            // Force WordPress to drop the blog archive template and load our clear shell
+    public function force_weather_template( $template ) {
+        $uri = $_SERVER['REQUEST_URI'];
+        if ( strpos( $uri, '/hava-durumu' ) !== false ) {
+            // Load the custom template directly from the GeneratePress child theme
             $custom_template = get_stylesheet_directory() . '/template-weather-hub.php';
             if ( file_exists( $custom_template ) ) {
-                include $custom_template;
-                exit;
+                return $custom_template;
             }
         }
+        return $template;
     }
 
     /**

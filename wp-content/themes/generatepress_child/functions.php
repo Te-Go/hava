@@ -83,14 +83,3 @@ function tedder_disable_url_guessing( $redirect_url, $requested_url ) {
     return $redirect_url;
 }
 
-add_action('init', function() {
-    // Register the virtual city parameter
-    add_rewrite_tag('%weather_city%', '([^&]+)');
-    
-    // Catch the URL and route it to the base hava-durumu page
-    add_rewrite_rule(
-        '^hava-durumu/([^/]+)/?$',
-        'index.php?pagename=hava-durumu&weather_city=$matches[1]',
-        'top'
-    );
-});
