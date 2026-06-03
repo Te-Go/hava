@@ -83,3 +83,15 @@ function tedder_disable_url_guessing( $redirect_url, $requested_url ) {
     return $redirect_url;
 }
 
+/**
+ * Add type="module" to the React bundle script tag so the browser can parse ES Modules.
+ */
+add_filter( 'script_loader_tag', 'tedder_add_module_type_to_react', 10, 3 );
+function tedder_add_module_type_to_react( $tag, $handle, $src ) {
+    // Check if it is our specific React bundle
+    if ( 'sinan-weather-react-app' === $handle ) {
+        // Rewrite the script tag to include type="module"
+        $tag = '<script type="module" src="' . esc_url( $src ) . '" id="sinan-weather-react-app-js"></script>' . "\n";
+    }
+    return $tag;
+}
