@@ -20,8 +20,17 @@ class SinanWeatherBridge {
     public function virtual_route_intercept() {
         $uri = $_SERVER['REQUEST_URI'];
         
-        // If the URL contains our app path
-        if ( strpos( $uri, '/hava-durumu' ) !== false ) {
+        $verticals = array('/hava-durumu', '/deniz-suyu-sicakligi', '/kayak-merkezleri');
+        $matched_vertical = null;
+    
+        foreach ($verticals as $vertical) {
+            if (strpos($uri, $vertical) !== false) {
+                $matched_vertical = $vertical;
+                break;
+            }
+        }
+        
+        if ( $matched_vertical ) {
             // Kill canonical guessing immediately
             remove_filter( 'template_redirect', 'redirect_canonical' );
             
@@ -36,20 +45,25 @@ class SinanWeatherBridge {
             
             // Natively extract the location parameter (Supports both City and District)
             $path = trim( parse_url( $uri, PHP_URL_PATH ), '/' );
-            if ( preg_match( '/hava-durumu\/(.+)/', $path, $matches ) ) {
+            $base_slug = trim($matched_vertical, '/');
+
+            if ( preg_match( '/' . preg_quote($base_slug, '/') . '\/(.+)/', $path, $matches ) ) {
                 $location_slug = sanitize_text_field( $matches[1] );
                 $parts = explode('/', $location_slug);
                 set_query_var( 'weather_city', $parts[0] );
+                set_query_var( 'current_vertical', $base_slug );
                 if ( isset( $parts[1] ) ) {
                     set_query_var( 'weather_district', $parts[1] );
                 }
+            } else {
+                set_query_var( 'current_vertical', $base_slug );
             }
         }
     }
 
     public function force_weather_template( $template ) {
         $uri = $_SERVER['REQUEST_URI'];
-        if ( strpos( $uri, '/hava-durumu' ) !== false ) {
+        if ( strpos($uri, '/hava-durumu') !== false || strpos($uri, '/deniz-suyu-sicakligi') !== false || strpos($uri, '/kayak-merkezleri') !== false ) {
             // Load the custom template directly from the GeneratePress child theme
             $custom_template = get_stylesheet_directory() . '/template-weather-hub.php';
             if ( file_exists( $custom_template ) ) {
@@ -125,6 +139,7 @@ class SinanWeatherBridge {
         ?>
         <script data-no-optimize="1">
             window.SinanWeatherPayload = {
+                currentVertical: "<?php echo esc_js( get_query_var('current_vertical') ?: 'hava-durumu' ); ?>",
                 currentCity: "<?php echo esc_js( $city_slug ); ?>",
                 weatherData: <?php echo $weather_payload ? $weather_payload : '{}'; ?>,
                 modules: {
