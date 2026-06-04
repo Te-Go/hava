@@ -119,11 +119,18 @@ tent li::marker { color: var(--accent-blue); font-weight: bold; }
     body.single-post #right-sidebar {
         width: 100% !important;
         margin-bottom: 40px;
-    }
 
-    /* Reduce Padding */
-    .entry-content { padding: 30px 25px !important; }
-    
-    /* Adjust Hero */
-    .gb-container.glass-card { width: 92% !important; padding: 25px !important; }
+
+
+/* =========================================
+   7. WEATHER APP FULL-SCREEN BREAKOUT
+   ========================================= */
+/* Force the React App to break out of the GeneratePress container and span full screen */
+#weather-app {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
 }
