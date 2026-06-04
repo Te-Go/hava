@@ -34,3 +34,14 @@ jobs:
           local-dir: ./generatepress_child/
           server-dir: /public_html/wp-content/themes/generatepress_child/
           state-name: .ftp-theme-sync-state.json
+
+      - name: Deploy Root Assets (Logos)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
+          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          port: 21
+          local-dir: ./logos/
+          server-dir: /public_html/logos/
+          state-name: .ftp-logos-sync-state.json
