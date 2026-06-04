@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           entryFileNames: 'bundle.js',
+          inlineDynamicImports: true,
           chunkFileNames: '[name].js',
           assetFileNames: '[name].[ext]',
           manualChunks: undefined

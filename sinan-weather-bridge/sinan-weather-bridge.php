@@ -63,16 +63,27 @@ class SinanWeatherBridge {
             set_query_var('weather_city', $location_param);
             set_query_var('current_vertical', $base_slug);
 
-            // RENDER STANDARD CLEAN PAGE TEMPLATE CONTEXT
-            get_header(); 
-            
-            echo '<main id="main" class="site-main">';
-            echo '<div class="inside-article">';
-            echo $this->render_react_mount(); 
-            echo '</div>';
-            echo '</main>';
-            
-            get_footer(); 
+            // RENDER BLANK CANVAS FOR FULL-SCREEN REACT APP
+            ?>
+            <!DOCTYPE html>
+            <html <?php language_attributes(); ?>>
+            <head>
+                <meta charset="<?php bloginfo( 'charset' ); ?>">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <?php wp_head(); // Injects SEO, Title, and our Payload ?>
+                <style>
+                    /* Reset margins so React can touch the edges of the screen */
+                    body, html { margin: 0; padding: 0; width: 100%; min-height: 100vh; }
+                </style>
+            </head>
+            <body <?php body_class(); ?>>
+                
+                <?php echo $this->render_react_mount(); // Mounts <div id="weather-app"> ?>
+                
+                <?php wp_footer(); // Executes the React JS Bundle ?>
+            </body>
+            </html>
+            <?php
             
             exit; // Absolute kill switch to guarantee zero template leaks
         }
