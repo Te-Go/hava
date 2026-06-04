@@ -6,8 +6,8 @@
  * With 10-min caching for 8 cities = ~1,150 requests/day
  */
 
-// API Key should be stored securely - for now passed via config
-const TOMTOM_API_BASE = 'https://api.tomtom.com/traffic/services/4/flowSegmentData';
+import { fetchWithCache } from './cacheService';
+import { getConfig } from './weatherService';
 
 export interface TomTomTrafficData {
     city: string;

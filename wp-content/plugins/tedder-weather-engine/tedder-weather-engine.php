@@ -274,3 +274,68 @@ require_once plugin_dir_path(__FILE__) . 'tedder-data-engine.php';
 
 // Load the Weather Bridge integration (Tier 2 Reactive JIT)
 require_once plugin_dir_path(__FILE__) . 'sinan-weather-bridge/sinan-weather-bridge.php';
+
+// Load the Secure API Proxy
+require_once plugin_dir_path(__FILE__) . 'tedder-api-proxy.php';
+
+/**
+ * Tedder Configuration Admin Page
+ */
+add_action('admin_menu', 'tedder_configuration_menu');
+
+function tedder_configuration_menu() {
+    add_options_page(
+        'Tedder Configuration',
+        'Tedder Config',
+        'manage_options',
+        'tedder-configuration',
+        'tedder_configuration_page'
+    );
+}
+
+function tedder_configuration_page() {
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    if (isset($_POST['tedder_save_config']) && check_admin_referer('tedder_config_nonce_action', 'tedder_config_nonce')) {
+        update_option('tedder_tomtom_api_key', sanitize_text_field($_POST['tedder_tomtom_api_key']));
+        update_option('tedder_wu_app_id', sanitize_text_field($_POST['tedder_wu_app_id']));
+        update_option('tedder_wu_app_key', sanitize_text_field($_POST['tedder_wu_app_key']));
+        update_option('tedder_keycollect_api_key', sanitize_text_field($_POST['tedder_keycollect_api_key']));
+        echo '<div class="updated"><p>Configuration saved securely.</p></div>';
+    }
+
+    $tomtom = get_option('tedder_tomtom_api_key', '');
+    $wu_id = get_option('tedder_wu_app_id', '');
+    $wu_key = get_option('tedder_wu_app_key', '');
+    $keycollect = get_option('tedder_keycollect_api_key', '');
+    ?>
+    <div class="wrap">
+        <h1>Tedder System Configuration</h1>
+        <form method="POST" action="">
+            <?php wp_nonce_field('tedder_config_nonce_action', 'tedder_config_nonce'); ?>
+            <input type="hidden" name="tedder_save_config" value="1">
+            <table class="form-table">
+                <tr>
+                    <th scope="row"><label for="tedder_tomtom_api_key">TomTom API Key (Traffic)</label></th>
+                    <td><input name="tedder_tomtom_api_key" type="text" id="tedder_tomtom_api_key" value="<?php echo esc_attr($tomtom); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="tedder_wu_app_id">WeatherUnlocked App ID (Ski)</label></th>
+                    <td><input name="tedder_wu_app_id" type="text" id="tedder_wu_app_id" value="<?php echo esc_attr($wu_id); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="tedder_wu_app_key">WeatherUnlocked App Key (Ski)</label></th>
+                    <td><input name="tedder_wu_app_key" type="text" id="tedder_wu_app_key" value="<?php echo esc_attr($wu_key); ?>" class="regular-text"></td>
+                </tr>
+                <tr>
+                    <th scope="row"><label for="tedder_keycollect_api_key">KeyCollect API Key (Finance)</label></th>
+                    <td><input name="tedder_keycollect_api_key" type="text" id="tedder_keycollect_api_key" value="<?php echo esc_attr($keycollect); ?>" class="regular-text"></td>
+                </tr>
+            </table>
+            <?php submit_button('Save Config'); ?>
+        </form>
+    </div>
+    <?php
+}
