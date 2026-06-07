@@ -162,27 +162,31 @@ class SinanWeatherBridge {
             ));
         }
 
-        $inline_script = 'window.SinanWeatherPayload = {
-            city: "' . esc_js( $city_slug ) . '",
-            weatherData: ' . $weather_payload . ',
-            modules: { showTraffic: true, showMarine: true }
-        };';
+        // 4. Construct the Payloads
+        $payload_array = array(
+            'city' => $city_slug,
+            'locationId' => 0,
+            'weatherData' => json_decode( $weather_payload, true ),
+            'modules' => array( 'showTraffic' => true, 'showMarine' => true, 'showSki' => true )
+        );
 
         $theme_url = get_stylesheet_directory_uri();
-        $inline_script .= '
-        window.TedderConfig = {
-            isProduction: true,
-            logos: {
-                GOLD: "' . $theme_url . '/dist/logos/logo-altin.png",
-                FX: "' . $theme_url . '/dist/logos/logo-dolar.png",
-                BOURSE: "' . $theme_url . '/dist/logos/logo-borsa.png",
-                CRYPTO: "' . $theme_url . '/dist/logos/logo-kripto.png",
-                WEATHER: "' . $theme_url . '/dist/logos/hava-durumlari-logo.png"
-            }
-        };';
+        $config_payload = array(
+            'isProduction' => true,
+            'logos' => array(
+                'GOLD' => $theme_url . '/dist/logos/logo-altin.png',
+                'FX' => $theme_url . '/dist/logos/logo-dolar.png',
+                'BOURSE' => $theme_url . '/dist/logos/logo-borsa.png',
+                'CRYPTO' => $theme_url . '/dist/logos/logo-kripto.png',
+                'WEATHER' => $theme_url . '/dist/logos/hava-durumlari-logo.png'
+            )
+        );
 
         // BRUTE-FORCE HEAD INJECTION: Bypass script_loader_tag wiping
-        echo "<script id=\"sinan-weather-payload\">\n" . $inline_script . "\n</script>\n";
+        echo "<script type=\"text/javascript\" id=\"sinan-weather-payload\">\n";
+        echo "window.SinanWeatherPayload = " . wp_json_encode( $payload_array ) . ";\n";
+        echo "window.TedderConfig = " . wp_json_encode( $config_payload ) . ";\n";
+        echo "</script>\n";
     }
 }
 new SinanWeatherBridge();
