@@ -16,19 +16,14 @@ class SinanWeatherBridge {
         add_action( 'template_redirect', array( $this, 'brute_force_virtual_routes' ), 1 );
         
         // 3. Centralized Data Hydration
-        add_action( 'wp_head', array( $this, 'inject_weather_payload_head' ), 10 );
+        add_action( 'wp_enqueue_scripts', array( $this, 'inject_weather_payload_head' ), 999 );
 
         // 4. Dynamic SEO Title Engine
         add_filter( 'document_title_parts', array( $this, 'inject_dynamic_seo_titles' ), 999 );
     }
 
     public function render_react_mount() {
-        // ALWAYS inject the payload right before the mount point, but safely buffer it to protect the REST API
-        ob_start();
-        $this->inject_weather_payload_head(true);
-        $payload = ob_get_clean();
-        
-        return $payload . '<div id="weather-app"></div>';
+        return '<div id="weather-app"></div>';
     }
 
     public function brute_force_virtual_routes() {
@@ -75,7 +70,7 @@ class SinanWeatherBridge {
             <head>
                 <meta charset="<?php bloginfo( 'charset' ); ?>">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
-                <?php wp_head(); // Injects SEO, Title, and our Payload ?>
+                <?php wp_head(); // Injects SEO, Title, and our Payload via wp_enqueue_scripts ?>
                 <style>
                     /* Reset margins so React can touch the edges of the screen */
                     body, html { margin: 0; padding: 0; width: 100%; min-height: 100vh; }
@@ -83,7 +78,7 @@ class SinanWeatherBridge {
             </head>
             <body <?php body_class(); ?>>
                 
-                <?php echo $this->render_react_mount(); // Mounts <div id="weather-app"> and the script payload ?>
+                <?php echo $this->render_react_mount(); // Mounts <div id="weather-app"> ?>
                 
                 <?php wp_footer(); // Executes the React JS Bundle ?>
             </body>
@@ -113,20 +108,11 @@ class SinanWeatherBridge {
         return $title_parts;
     }
 
-    public function inject_weather_payload_head($force = false) {
-        // Only run once per page load to prevent duplicate <script> tags
-        static $has_run = false;
-        if ($has_run) return;
-
-        $is_virtual = get_query_var('weather_city') ? true : false;
-        $is_home    = is_front_page() || is_home() || is_page(305); 
-        
-        // If force is true (called via shortcode), bypass the standard checks
-        if ( ! $force && ! $is_virtual && ! $is_home ) {
-            return; 
+    public function inject_weather_payload_head() {
+        // We only inject if the React app is actively enqueued to render on the page
+        if ( ! wp_script_is( 'sinan-weather-react-app', 'enqueued' ) ) {
+            return;
         }
-
-        $has_run = true; // Mark as injected
 
         $city_slug = get_query_var('weather_city') ? sanitize_title(get_query_var('weather_city')) : 'istanbul';
         $cache_dir = wp_upload_dir()['basedir'] . '/sinan-weather-cache';
@@ -158,13 +144,14 @@ class SinanWeatherBridge {
             ));
         }
 
-        echo '<script data-no-optimize="1">
-            window.SinanWeatherPayload = {
-                city: "' . esc_js( $city_slug ) . '",
-                weatherData: ' . ($weather_payload ? $weather_payload : '{}') . ',
-                modules: { showTraffic: true, showMarine: true }
-            };
-        </script>';
+        $inline_script = 'window.SinanWeatherPayload = {
+            city: "' . esc_js( $city_slug ) . '",
+            weatherData: ' . ($weather_payload ? $weather_payload : '{}') . ',
+            modules: { showTraffic: true, showMarine: true }
+        };';
+
+        // NATIVE: Attach strictly BEFORE the react bundle loads
+        wp_add_inline_script( 'sinan-weather-react-app', $inline_script, 'before' );
     }
 }
 new SinanWeatherBridge();
