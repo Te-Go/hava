@@ -10,8 +10,10 @@ function generatepress_child_enqueue_styles() {
     // Enqueue Parent Theme Style
     wp_enqueue_style( 'generatepress-parent-style', get_template_directory_uri() . '/style.css' );
     
-    // Enqueue Child Theme Style
-    wp_enqueue_style( 'generatepress-child-style', get_stylesheet_directory_uri() . '/style.css', array( 'generatepress-parent-style' ) );
+    // Enqueue Child Theme Style with Cache Busting
+    $child_css_path = get_stylesheet_directory() . '/style.css';
+    $child_version = file_exists($child_css_path) ? filemtime($child_css_path) : '1.0.0';
+    wp_enqueue_style( 'generatepress-child-style', get_stylesheet_directory_uri() . '/style.css', array( 'generatepress-parent-style' ), $child_version );
     
     // Check if the current view is using our programmatic weather hub template or is the home page
     if ( is_front_page() || is_home() || get_query_var('weather_city') || is_page('hava-durumu') ) {

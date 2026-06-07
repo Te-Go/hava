@@ -15,8 +15,8 @@ class SinanWeatherBridge {
         // 2. Brute-Force Route Interceptor
         add_action( 'template_redirect', array( $this, 'brute_force_virtual_routes' ), 1 );
         
-        // 3. Centralized Data Hydration
-        add_action( 'wp_enqueue_scripts', array( $this, 'inject_weather_payload_head' ), 999 );
+        // 3. Centralized Data Hydration - Brute force injection to wp_head
+        add_action( 'wp_head', array( $this, 'inject_weather_payload_head' ), 1 );
 
         // 4. Dynamic SEO Title Engine
         add_filter( 'document_title_parts', array( $this, 'inject_dynamic_seo_titles' ), 999 );
@@ -109,8 +109,8 @@ class SinanWeatherBridge {
     }
 
     public function inject_weather_payload_head() {
-        // We only inject if the React app is actively enqueued to render on the page
-        if ( ! wp_script_is( 'sinan-weather-react-app', 'enqueued' ) ) {
+        // We only inject on the homepage or weather pages
+        if ( ! ( is_front_page() || is_home() || get_query_var('weather_city') || is_page('hava-durumu') ) ) {
             return;
         }
 
@@ -181,8 +181,8 @@ class SinanWeatherBridge {
             }
         };';
 
-        // NATIVE: Attach strictly BEFORE the react bundle loads
-        wp_add_inline_script( 'sinan-weather-react-app', $inline_script, 'before' );
+        // BRUTE-FORCE HEAD INJECTION: Bypass script_loader_tag wiping
+        echo "<script id=\"sinan-weather-payload\">\n" . $inline_script . "\n</script>\n";
     }
 }
 new SinanWeatherBridge();
