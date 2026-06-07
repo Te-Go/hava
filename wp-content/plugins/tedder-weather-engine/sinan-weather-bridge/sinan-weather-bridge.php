@@ -23,6 +23,8 @@ class SinanWeatherBridge {
     }
 
     public function render_react_mount() {
+        // ALWAYS inject the payload right before the mount point to guarantee it exists
+        $this->inject_weather_payload_head(true);
         return '<div id="weather-app"></div>';
     }
 
@@ -78,7 +80,7 @@ class SinanWeatherBridge {
             </head>
             <body <?php body_class(); ?>>
                 
-                <?php echo $this->render_react_mount(); // Mounts <div id="weather-app"> ?>
+                <?php echo $this->render_react_mount(); // Mounts <div id="weather-app"> and the script payload ?>
                 
                 <?php wp_footer(); // Executes the React JS Bundle ?>
             </body>
@@ -108,13 +110,20 @@ class SinanWeatherBridge {
         return $title_parts;
     }
 
-    public function inject_weather_payload_head() {
+    public function inject_weather_payload_head($force = false) {
+        // Only run once per page load to prevent duplicate <script> tags
+        static $has_run = false;
+        if ($has_run) return;
+
         $is_virtual = get_query_var('weather_city') ? true : false;
         $is_home    = is_front_page() || is_home() || is_page(305); 
         
-        if ( ! $is_virtual && ! $is_home ) {
+        // If force is true (called via shortcode), bypass the standard checks
+        if ( ! $force && ! $is_virtual && ! $is_home ) {
             return; 
         }
+
+        $has_run = true; // Mark as injected
 
         $city_slug = get_query_var('weather_city') ? sanitize_title(get_query_var('weather_city')) : 'istanbul';
         $cache_dir = wp_upload_dir()['basedir'] . '/sinan-weather-cache';
@@ -136,6 +145,14 @@ class SinanWeatherBridge {
                 if ( ! file_exists( $cache_dir ) ) wp_mkdir_p( $cache_dir );
                 file_put_contents( $live_file, $weather_payload );
             }
+        }
+
+        // To prevent React crashing on an empty data object, mock a minimal structure if api failed
+        if ( $weather_payload === '{}' || empty( $weather_payload ) ) {
+            $weather_payload = json_encode(array(
+                'current_weather' => array('temperature' => 15, 'windspeed' => 10, 'weathercode' => 0),
+                'hourly' => array('time' => array(), 'temperature_2m' => array())
+            ));
         }
 
         echo '<script data-no-optimize="1">
