@@ -23,9 +23,12 @@ class SinanWeatherBridge {
     }
 
     public function render_react_mount() {
-        // ALWAYS inject the payload right before the mount point to guarantee it exists
+        // ALWAYS inject the payload right before the mount point, but safely buffer it to protect the REST API
+        ob_start();
         $this->inject_weather_payload_head(true);
-        return '<div id="weather-app"></div>';
+        $payload = ob_get_clean();
+        
+        return $payload . '<div id="weather-app"></div>';
     }
 
     public function brute_force_virtual_routes() {
