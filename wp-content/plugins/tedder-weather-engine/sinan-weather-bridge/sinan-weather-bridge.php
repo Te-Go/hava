@@ -117,37 +117,68 @@ class SinanWeatherBridge {
         $city_slug = get_query_var('weather_city') ? sanitize_title(get_query_var('weather_city')) : 'istanbul';
         $cache_dir = wp_upload_dir()['basedir'] . '/sinan-weather-cache';
         $live_file = "{$cache_dir}/{$city_slug}.json";
-        $weather_payload = '{}';
+        
+        $weather_payload = null;
+        $is_valid_cache = false;
 
+        // 1. Try Cache
         if ( file_exists( $live_file ) && (time() - filemtime( $live_file ) < 1200) ) {
-            $weather_payload = file_get_contents( $live_file );
+            $raw_cache = file_get_contents( $live_file );
+            $parsed = json_decode($raw_cache, true);
+            if (is_array($parsed) && isset($parsed['current_weather'])) {
+                $weather_payload = $raw_cache;
+                $is_valid_cache = true;
+            }
         }
 
-        if ( $weather_payload === '{}' || empty( $weather_payload ) ) {
+        // 2. Try API if cache is invalid/missing
+        if ( ! $is_valid_cache ) {
+            // Fallback coordinate mapping for the root/default
             $lat = 41.0082; $lon = 28.9784; 
-            $api_url  = "https://api.open-meteo.com/v1/forecast?latitude={$lat}&longitude={$lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m";
+            if ($city_slug === 'antalya') { $lat = 36.8969; $lon = 30.7133; }
+            
+            // Add daily forecast to ensure the React app has full data
+            $api_url  = "https://api.open-meteo.com/v1/forecast?latitude={$lat}&longitude={$lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto";
             
             $response = wp_remote_get( $api_url, array( 'timeout' => 10, 'sslverify' => false ) );
 
             if ( ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) === 200 ) {
-                $weather_payload = wp_remote_retrieve_body( $response );
-                if ( ! file_exists( $cache_dir ) ) wp_mkdir_p( $cache_dir );
-                file_put_contents( $live_file, $weather_payload );
+                $raw_api = wp_remote_retrieve_body( $response );
+                $parsed = json_decode($raw_api, true);
+                if (is_array($parsed) && isset($parsed['current_weather'])) {
+                    $weather_payload = $raw_api;
+                    if ( ! file_exists( $cache_dir ) ) wp_mkdir_p( $cache_dir );
+                    file_put_contents( $live_file, $weather_payload );
+                }
             }
         }
 
-        // To prevent React crashing on an empty data object, mock a minimal structure if api failed
-        if ( $weather_payload === '{}' || empty( $weather_payload ) ) {
+        // 3. Absolute Fail-Safe Mock (if API also fails)
+        if ( ! $weather_payload ) {
             $weather_payload = json_encode(array(
                 'current_weather' => array('temperature' => 15, 'windspeed' => 10, 'weathercode' => 0),
-                'hourly' => array('time' => array(), 'temperature_2m' => array())
+                'hourly' => array('time' => array(), 'temperature_2m' => array()),
+                'daily' => array('time' => array(date('Y-m-d')), 'temperature_2m_max' => array(15), 'temperature_2m_min' => array(5))
             ));
         }
 
         $inline_script = 'window.SinanWeatherPayload = {
             city: "' . esc_js( $city_slug ) . '",
-            weatherData: ' . ($weather_payload ? $weather_payload : '{}') . ',
+            weatherData: ' . $weather_payload . ',
             modules: { showTraffic: true, showMarine: true }
+        };';
+
+        $theme_url = get_stylesheet_directory_uri();
+        $inline_script .= '
+        window.TedderConfig = {
+            isProduction: true,
+            logos: {
+                GOLD: "' . $theme_url . '/dist/logos/logo-altin.png",
+                FX: "' . $theme_url . '/dist/logos/logo-dolar.png",
+                BOURSE: "' . $theme_url . '/dist/logos/logo-borsa.png",
+                CRYPTO: "' . $theme_url . '/dist/logos/logo-kripto.png",
+                WEATHER: "' . $theme_url . '/dist/logos/hava-durumlari-logo.png"
+            }
         };';
 
         // NATIVE: Attach strictly BEFORE the react bundle loads
