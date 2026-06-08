@@ -564,7 +564,14 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
     const fetchData = async () => {
       if (payload && payload.weatherData) {
-        setWeatherData(payload.weatherData);
+        // SAFEGUARD: Inject missing properties into raw API data to prevent TypeErrors
+        const safeWeatherData = {
+            ...payload.weatherData,
+            city: payload.city || currentCity, // Fixes toSlug(undefined) crash
+            icon: payload.weatherData.current_weather?.weathercode?.toString() || '' // Fixes .includes() crash
+        };
+        
+        setWeatherData(safeWeatherData);
         setTrafficData(payload.weatherData.trafficData || null);
         setMarineData(payload.weatherData.marineData || null);
         setSkiData(payload.weatherData.skiData || null);
@@ -597,8 +604,9 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
     // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
     // SINAN FIX: Ensure we only switch theme if the data matches the CURRENT city (prevents stale data flash)
-    if (weatherData && !isManualTheme && !loading && toSlug(weatherData.city) === toSlug(currentCity)) {
-      if (weatherData.icon === 'moon' || weatherData.icon.includes('night') || weatherData.icon.includes('storm')) {
+    if (weatherData && !isManualTheme && !loading && toSlug(weatherData.city || currentCity) === toSlug(currentCity)) {
+      const iconStatus = weatherData.icon || '';
+      if (iconStatus === 'moon' || iconStatus.includes('night') || iconStatus.includes('storm')) {
         setIsDarkMode(true);
       } else {
         setIsDarkMode(false);
