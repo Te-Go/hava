@@ -125,7 +125,7 @@ class SinanWeatherBridge {
         if ( file_exists( $live_file ) && (time() - filemtime( $live_file ) < 1200) ) {
             $raw_cache = file_get_contents( $live_file );
             $parsed = json_decode($raw_cache, true);
-            if (is_array($parsed) && isset($parsed['current_weather'])) {
+            if (is_array($parsed) && isset($parsed['current_weather']) && isset($parsed['hourly']) && isset($parsed['daily'])) {
                 $weather_payload = $raw_cache;
                 $is_valid_cache = true;
             }
@@ -145,7 +145,7 @@ class SinanWeatherBridge {
             if ( ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) === 200 ) {
                 $raw_api = wp_remote_retrieve_body( $response );
                 $parsed = json_decode($raw_api, true);
-                if (is_array($parsed) && isset($parsed['current_weather'])) {
+                if (is_array($parsed) && isset($parsed['current_weather']) && isset($parsed['hourly']) && isset($parsed['daily'])) {
                     $weather_payload = $raw_api;
                     if ( ! file_exists( $cache_dir ) ) wp_mkdir_p( $cache_dir );
                     file_put_contents( $live_file, $weather_payload );

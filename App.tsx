@@ -120,10 +120,10 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
     // ⛔️ PRIORITY 1: Server Injection (The "Truth")
     // If PHP (Asset Loader) injected the data object, use it.
-    if (typeof window !== 'undefined' && (window as any).INITIAL_WEATHER_DATA) {
+    if (typeof window !== 'undefined' && (window as any).SinanWeatherPayload) {
       return {
-        city: (window as any).INITIAL_WEATHER_DATA.city || 'İstanbul',
-        view: (window as any).INITIAL_WEATHER_DATA.view || 'home'
+        city: (window as any).SinanWeatherPayload.city || 'İstanbul',
+        view: 'home'
       };
     }
 
