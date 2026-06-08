@@ -110,7 +110,7 @@ class SinanWeatherBridge {
 
     public function inject_weather_payload_head() {
         // We only inject on the homepage or weather pages
-        if ( ! ( is_front_page() || is_home() || get_query_var('weather_city') || is_page('hava-durumu') ) ) {
+        if ( ! ( is_front_page() || is_home() || is_page(305) || get_query_var('weather_city') || is_page('hava-durumu') ) ) {
             return;
         }
 
