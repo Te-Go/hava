@@ -563,6 +563,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     let isMounted = true;
 
     const fetchData = async () => {
+      console.log('DEBUG: Payload City:', payload?.city, 'vs App City:', currentCity);
       if (payload && payload.weatherData) {
         // SAFEGUARD: Inject missing properties into raw API data to prevent TypeErrors
         const safeWeatherData = {
@@ -766,41 +767,10 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
             {loading ? (
               <div className="flex items-center justify-center min-h-[50vh]"><div className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div></div>
             ) : !displayData ? (
-              /* SINAN FIX: Show Location Not Found error - matching LocationSearchPage style */
-              <div className="flex items-center justify-center min-h-[50vh] px-4">
-                <div className="w-full max-w-md bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-3xl shadow-xl border border-white/60 dark:border-slate-700 p-8 text-center">
-                  <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Icon.MapPin className="w-10 h-10 text-red-500" />
-                  </div>
-                  <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-                    Konum Bulunamadı
-                  </h1>
-                  <p className="text-slate-600 dark:text-slate-300 mb-6">
-                    Aradığınız konum veritabanımızda bulunamadı.
-                  </p>
-                  <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 mb-6 text-left">
-                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Öneriler:</p>
-                    <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-1">
-                      <li>• Şehir veya ilçe adını kontrol edin</li>
-                      <li>• Türkçe karakterleri kullanmayı deneyin</li>
-                      <li>• Daha genel bir konum adı deneyin</li>
-                    </ul>
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => window.history.back()}
-                      className="flex-1 px-6 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                    >
-                      ← Geri
-                    </button>
-                    <a
-                      href="/"
-                      className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-colors text-center"
-                    >
-                      Ana Sayfa
-                    </a>
-                  </div>
-                </div>
+              <div className="p-4 text-left text-red-700 bg-red-50 border border-red-500 rounded-lg font-mono text-xs overflow-auto max-w-4xl mx-auto my-8">
+                <h3 className="font-bold text-base mb-2">DEBUG MODE: App Terminated Early (No valid displayData)</h3>
+                <p className="mb-4">The React Router evaluated to false and failed to render the dashboard. Displaying raw window.SinanWeatherPayload below:</p>
+                <pre>{JSON.stringify(window.SinanWeatherPayload, null, 2)}</pre>
               </div>
             ) : (
               <div className="animate-fadeIn mt-4">

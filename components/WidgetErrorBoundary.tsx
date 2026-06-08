@@ -7,13 +7,14 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   hasError: boolean;
+  error?: Error;
 }
 
 export class WidgetErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { hasError: false };
 
-  static getDerivedStateFromError(_error: Error): ErrorBoundaryState {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -24,8 +25,9 @@ export class WidgetErrorBoundary extends React.Component<ErrorBoundaryProps, Err
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-4 text-center text-slate-500 bg-slate-50 rounded-lg border border-slate-200">
-          Modül yüklenemedi.
+        <div className="p-4 text-left text-red-700 bg-red-50 border border-red-500 rounded-lg font-mono text-xs overflow-auto">
+          <strong>CRASH DETECTED (WidgetErrorBoundary):</strong><br/>
+          {this.state.error?.toString()}
         </div>
       );
     }
