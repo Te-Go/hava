@@ -579,6 +579,17 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
         setAltitudeData(payload.weatherData.altitudeData || null);
         setFireRiskData(payload.weatherData.fireRiskData || null);
         setTourismData(payload.weatherData.tourismData || null);
+
+        // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
+        if (safeWeatherData && !isManualTheme && !loading && toSlug(safeWeatherData.city) === toSlug(currentCity)) {
+          const iconStatus = safeWeatherData.icon || '';
+          if (iconStatus === 'moon' || iconStatus.includes('night') || iconStatus.includes('storm')) {
+            setIsDarkMode(true);
+          } else {
+            setIsDarkMode(false);
+          }
+        }
+
         setLoading(false);
         return;
       }
@@ -602,16 +613,6 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       localStorage.setItem('sinan_last_city', toSlug(currentCity));
     }
 
-    // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
-    // SINAN FIX: Ensure we only switch theme if the data matches the CURRENT city (prevents stale data flash)
-    if (weatherData && !isManualTheme && !loading && toSlug(weatherData.city || currentCity) === toSlug(currentCity)) {
-      const iconStatus = weatherData.icon || '';
-      if (iconStatus === 'moon' || iconStatus.includes('night') || iconStatus.includes('storm')) {
-        setIsDarkMode(true);
-      } else {
-        setIsDarkMode(false);
-      }
-    }
 
     // SINAN STANDARD TITLE FORMAT - Must match PHP SEO Engine exactly
     if (!weatherData) return;
