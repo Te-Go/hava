@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
       drop: mode === 'production' ? ['console', 'debugger'] : [],
     },
     build: {
-      outDir: 'dist',
+      outDir: 'generatepress_child/dist',
       assetsDir: 'assets',
       sourcemap: false, // Disable source maps for production to save space
       minify: 'esbuild', // Use native, high-performance esbuild minification
