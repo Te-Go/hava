@@ -1164,7 +1164,7 @@ const getCityCoords = (city: string): { lat: number; lon: number } => {
   // Try exact match first
   if (CITY_COORDS[city]) return CITY_COORDS[city];
   // Try lowercase
-  const lower = city.toLowerCase();
+  const lower = (city || '').toLowerCase();
   if (CITY_COORDS[lower]) return CITY_COORDS[lower];
   // Try slug-based lookup
   const slug = toSlug(city);
@@ -1409,7 +1409,7 @@ export const getTomorrowDashboardData = (data: WeatherData): WeatherData => {
 export const getWeekendDashboardData = (data: WeatherData): WeatherData => {
   // Find Saturday and Sunday in the daily forecast
   const weekendDays = data.daily.filter((day) => {
-    const dayName = day.day.toLowerCase();
+    const dayName = (day.day || '').toLowerCase();
     return dayName === 'cmt' || dayName === 'paz' ||
       dayName === 'cumartesi' || dayName === 'pazar';
   });

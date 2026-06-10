@@ -414,7 +414,7 @@ const generateSicaklikCommentary = (
     }
 
     // Add city flavor if available
-    const cityKey = city.toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c');
+    const cityKey = (city || '').toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c');
     const flavor = CITY_FLAVORS[cityKey]?.temperature;
     if (flavor && Math.random() > 0.5) {
         description += ' ' + flavor;
@@ -654,7 +654,7 @@ const generateRuzgarCommentary = (
     }
 
     // Add city flavor
-    const cityKey = city.toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c');
+    const cityKey = (city || '').toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c');
     const flavor = CITY_FLAVORS[cityKey]?.wind;
     if (flavor && speed >= 15) {
         description += ' ' + flavor;
@@ -1076,7 +1076,7 @@ const generateAnswerBlock = (
     timeframe: Timeframe,
     city: string
 ): string => {
-    const condition = data.condition.toLowerCase();
+    const condition = (data.condition || '').toLowerCase();
     const high = Math.round(data.high);
     const low = Math.round(data.low);
     const rainProb = data.rainProb;
@@ -1119,7 +1119,7 @@ const generateAnswerBlock = (
             rainStatement = 'Yağış beklenmiyor.';
         }
 
-        return `Yarın ${city}'de hava ${tomorrow.condition.toLowerCase()} olacak. Sıcaklık ${tomorrow.low}° ile ${tomorrow.high}° arasında. ${changeStatement} ${rainStatement}`;
+        return `Yarın ${city}'de hava ${(tomorrow.condition || '').toLowerCase()} olacak. Sıcaklık ${tomorrow.low}° ile ${tomorrow.high}° arasında. ${changeStatement} ${rainStatement}`;
 
     } else if (timeframe === 'weekend' && weekend.length >= 2) {
         // Weekend: Aggregate Saturday and Sunday
@@ -1138,7 +1138,7 @@ const generateAnswerBlock = (
             rainStatement = 'Yağış beklenmiyor, dış mekan aktiviteleri için uygun.';
         }
 
-        return `Hafta sonu ${city}'de Cumartesi ${saturday.condition.toLowerCase()}, Pazar ${sunday.condition.toLowerCase()} bekleniyor. Sıcaklıklar ${avgLow}° ile ${avgHigh}° arasında. ${rainStatement}`;
+        return `Hafta sonu ${city}'de Cumartesi ${(saturday.condition || '').toLowerCase()}, Pazar ${(sunday.condition || '').toLowerCase()} bekleniyor. Sıcaklıklar ${avgLow}° ile ${avgHigh}° arasında. ${rainStatement}`;
     }
 
     // Fallback
@@ -1185,7 +1185,7 @@ const generateTimeframeBlock = (
             ? `%${data.rainProb} yağış ihtimali bulunuyor.`
             : 'Yağış beklenmiyor.';
 
-        content = `${city}'de bugün ${data.condition.toLowerCase()} hava hakim. ` +
+        content = `${city}'de bugün ${(data.condition || '').toLowerCase()} hava hakim. ` +
             `Sıcaklık ${data.low}° ile ${data.high}° arasında değişecek. ${rainStatement} ` +
             `Rüzgar ${getWindDirectionLabel(parseFloat(data.windDirection))} yönünden ` +
             `${data.windSpeed} km/sa hızla esecek.`;
@@ -1237,8 +1237,8 @@ const generateTimeframeBlock = (
         const maxRainProb = Math.max(saturday.rainProb, sunday.rainProb);
         const avgHigh = Math.round((saturday.high + sunday.high) / 2);
 
-        content = `Hafta sonu ${city}'de Cumartesi ${saturday.condition.toLowerCase()}, ` +
-            `Pazar ${sunday.condition.toLowerCase()} bekleniyor. ` +
+        content = `Hafta sonu ${city}'de Cumartesi ${(saturday.condition || '').toLowerCase()}, ` +
+            `Pazar ${(sunday.condition || '').toLowerCase()} bekleniyor. ` +
             `Ortalama en yüksek sıcaklık ${avgHigh}°. `;
         content += maxRainProb >= 30
             ? `Yağış riski mevcut (%${maxRainProb}).`

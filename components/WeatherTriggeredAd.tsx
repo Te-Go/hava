@@ -91,7 +91,7 @@ const getAdTrigger = (weatherData: WeatherData | null): string => {
 
     // Get WMO code from condition (reverse lookup needed)
     // For simplicity, we'll use pattern matching on condition text + temp/UV
-    const condition = weatherData.condition.toLowerCase();
+    const condition = (weatherData.condition || '').toLowerCase();
     const temp = weatherData.currentTemp;
     const uv = weatherData.uvIndex || 0;
 

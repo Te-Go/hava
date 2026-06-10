@@ -27,7 +27,9 @@ export class WidgetErrorBoundary extends React.Component<ErrorBoundaryProps, Err
       return (
         <div className="p-4 text-left text-red-700 bg-red-50 border border-red-500 rounded-lg font-mono text-xs overflow-auto">
           <strong>CRASH DETECTED (WidgetErrorBoundary):</strong><br/>
-          {this.state.error?.toString()}
+          <pre className="text-xs text-left overflow-auto mt-2">
+            {this.state.error?.stack || this.state.error?.message}
+          </pre>
         </div>
       );
     }

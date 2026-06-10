@@ -277,7 +277,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('test_accuracy') === 'true') {
         const today = new Date().toISOString().split('T')[0];
-        const normalizedCity = currentCity.toLowerCase()
+        const normalizedCity = (currentCity || '').toLowerCase()
           .replace(/İ/gi, 'i').replace(/ı/g, 'i').replace(/ğ/g, 'g')
           .replace(/ş/g, 's').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c');
         const fakeForecast = {
