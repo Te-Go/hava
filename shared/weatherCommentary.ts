@@ -924,8 +924,8 @@ const generateGunCommentary = (
     timeframe: Timeframe,
     city: string
 ): MetricCommentary => {
-    const sunrise = data.sunrise;
-    const sunset = data.sunset;
+    const sunrise = data.sunrise || '06:00';
+    const sunset = data.sunset || '18:00';
 
     // Calculate day length
     const [srH, srM] = sunrise.split(':').map(Number);

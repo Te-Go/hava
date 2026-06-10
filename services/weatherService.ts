@@ -1057,8 +1057,8 @@ const mapOpenMeteoToModel = async (city: string, data: any): Promise<WeatherData
     feelsLike: current.apparent_temperature,
     pressure: current.surface_pressure,
     aqi: await fetchAirQuality(data.latitude, data.longitude),
-    sunrise: daily.sunrise[0].split('T')[1],
-    sunset: daily.sunset[0].split('T')[1],
+    sunrise: daily.sunrise[0]?.split('T')[1] || '06:00',
+    sunset: daily.sunset[0]?.split('T')[1] || '18:00',
     cloudCover: current.cloud_cover ?? 0,
     hourly: hourlyData,
     daily: dailyData
@@ -1356,7 +1356,7 @@ export const transformToTomorrow = (data: WeatherData): WeatherData => {
   let foundFirstMidnight = false;
 
   for (let i = 0; i < data.hourly.length; i++) {
-    const hour = parseInt(data.hourly[i].time.split(':')[0], 10);
+    const hour = parseInt(data.hourly[i].time?.split(':')[0] || '0', 10);
     if (hour === 0) {
       if (!foundFirstMidnight) {
         // This is today's midnight (if current time is before midnight) or tomorrow's
@@ -1437,7 +1437,7 @@ export const getWeekendDashboardData = (data: WeatherData): WeatherData => {
   let saturdayMidnightIndex = -1;
 
   for (let i = 0; i < data.hourly.length; i++) {
-    const hour = parseInt(data.hourly[i].time.split(':')[0], 10);
+    const hour = parseInt(data.hourly[i].time?.split(':')[0] || '0', 10);
     if (hour === 0) {
       midnightCount++;
       // We need to find the (daysUntilSaturday + 1)th midnight
