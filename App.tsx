@@ -113,6 +113,53 @@ const RESERVED_PATHS = [
   'sehirler' // Cities index page
 ];
 
+// 1. GLOBAL INTERCEPTOR (Place outside the App component)
+const sanitizeOpenMeteoPayload = (payload: any) => {
+    if (!payload || !payload.weatherData) return payload;
+
+    // Transpose Daily
+    const rawDaily = payload.weatherData.daily || {};
+    const transformedDaily = Array.isArray(rawDaily) ? rawDaily : (rawDaily.time || []).map((t: string, i: number) => ({
+        day: new Date(t).toLocaleDateString('tr-TR', { weekday: 'short' }),
+        high: rawDaily.temperature_2m_max?.[i] || 0,
+        low: rawDaily.temperature_2m_min?.[i] || 0,
+        rainProb: rawDaily.precipitation_probability_max?.[i] || 0,
+        wind: rawDaily.wind_speed_10m_max?.[i] ? `${rawDaily.wind_speed_10m_max[i]} km/s` : '0 km/sa',
+        condition: 'Açık',
+        icon: rawDaily.weathercode?.[i]?.toString() || '0'
+    }));
+
+    // Transpose Hourly
+    const rawHourly = payload.weatherData.hourly || {};
+    const transformedHourly = Array.isArray(rawHourly) ? rawHourly : (rawHourly.time || []).map((t: string, i: number) => ({
+        time: t,
+        temp: rawHourly.temperature_2m?.[i] || 0,
+        feelsLike: rawHourly.temperature_2m?.[i] || 0, 
+        precipProb: rawHourly.precipitation_probability?.[i] || 0,
+        windSpeed: rawHourly.wind_speed_10m?.[i] || 0,
+        humidity: rawHourly.relative_humidity_2m?.[i] || 0
+    }));
+
+    return {
+        ...payload,
+        city: payload.city,
+        weatherData: {
+            ...payload.weatherData,
+            daily: transformedDaily,
+            hourly: transformedHourly,
+            city: payload.city,
+            icon: payload.weatherData.current_weather?.weathercode?.toString() || ''
+        }
+    };
+};
+
+// 2. SAFE INITIALIZATION (Place before App component)
+const safeInitialPayload = typeof window !== 'undefined' && (window as any).SinanWeatherPayload 
+    ? sanitizeOpenMeteoPayload((window as any).SinanWeatherPayload) 
+    : null;
+const INITIAL_WEATHER_DATA = safeInitialPayload?.weatherData || null;
+
+
 const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
   // BULLETPROOF HYDRATION LOGIC
@@ -220,7 +267,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   const initialState = getInitialState();
   const [currentCity, setCurrentCity] = useState<string>(initialState.city);
   const [parentCity, setParentCity] = useState<string | null>(initialState.parentCity || null);
-  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(INITIAL_WEATHER_DATA);
   const [marketData, setMarketData] = useState<MarketTicker[]>([]);
   const [articles, setArticles] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -565,28 +612,9 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     const fetchData = async () => {
       console.log('DEBUG: Payload City:', payload?.city, 'vs App City:', currentCity);
       if (payload && payload.weatherData) {
-        // 1. Transpose Open-Meteo's Daily Object into an Array of Objects
-        const rawDaily = payload.weatherData?.daily || {};
-        
-        // Check if it's already an array (e.g. from a different endpoint) or an object
-        const transformedDaily = Array.isArray(rawDaily) ? rawDaily : (rawDaily.time || []).map((dateStr: string, index: number) => ({
-            day: new Date(dateStr).toLocaleDateString('tr-TR', { weekday: 'short' }),
-            high: rawDaily.temperature_2m_max?.[index] || 0,
-            low: rawDaily.temperature_2m_min?.[index] || 0,
-            rainProb: rawDaily.precipitation_probability_max?.[index] || 0,
-            wind: rawDaily.wind_speed_10m_max?.[index] ? `${rawDaily.wind_speed_10m_max[index]} km/s` : '0 km/sa',
-            // Fallback for condition since Open-Meteo uses weathercode
-            condition: 'Açık', 
-            icon: rawDaily.weathercode?.[index]?.toString() || '0'
-        }));
-
-        // SAFEGUARD: Inject missing properties into raw API data to prevent TypeErrors
-        const safeWeatherData = {
-            ...payload.weatherData,
-            city: payload.city || currentCity, // Fixes toSlug(undefined) crash
-            icon: payload.weatherData.current_weather?.weathercode?.toString() || '', // Fixes .includes() crash
-            daily: transformedDaily // <--- CRITICAL FIX: Override raw daily with our mapped array
-        };
+        // Use the global sanitizer to get transposed daily and hourly data
+        const sanitized = sanitizeOpenMeteoPayload(payload);
+        const safeWeatherData = sanitized.weatherData;
         
         setWeatherData(safeWeatherData);
         setTrafficData(payload.weatherData.trafficData || null);
