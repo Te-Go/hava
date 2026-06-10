@@ -41,8 +41,8 @@ const HourlyMeteogram: React.FC<HourlyMeteogramProps> = ({ hourlyData, sunrise, 
     const tempRange = maxTemp - minTemp || 1;
 
     // Parse sunrise/sunset hours
-    const sunriseHour = parseInt(sunrise.split(':')[0], 10);
-    const sunsetHour = parseInt(sunset.split(':')[0], 10);
+    const sunriseHour = parseInt(sunrise?.split(':')[0] || '0', 10);
+    const sunsetHour = parseInt(sunset?.split(':')[0] || '0', 10);
 
     // Scroll handlers
     const scroll = (direction: 'left' | 'right') => {
@@ -155,7 +155,7 @@ const HourlyMeteogram: React.FC<HourlyMeteogramProps> = ({ hourlyData, sunrise, 
 
                     {/* Hour Cards */}
                     {data.map((hour, index) => {
-                        const currentHour = parseInt(hour.time.split(':')[0], 10);
+                        const currentHour = parseInt(hour.time?.split(':')[0] || '0', 10);
                         const isSunrise = currentHour === sunriseHour;
                         const isSunset = currentHour === sunsetHour;
 

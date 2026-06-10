@@ -79,8 +79,8 @@ const SunCycleCard: React.FC<{ sunrise: string, sunset: string }> = ({ sunrise, 
       const now = new Date();
       if (!sunrise || !sunset) return { progress: 0, isNight: false };
 
-      const [srH, srM] = sunrise.split(':').map(Number);
-      const [ssH, ssM] = sunset.split(':').map(Number);
+      const [srH, srM] = (sunrise?.split(':') || ['0', '0']).map(Number);
+      const [ssH, ssM] = (sunset?.split(':') || ['0', '0']).map(Number);
 
       const srMins = srH * 60 + srM;
       const ssMins = ssH * 60 + ssM;

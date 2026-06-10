@@ -21,7 +21,7 @@ interface MetricSparklineProps {
 const MetricSparkline: React.FC<MetricSparklineProps> = ({ metric, hourlyData, dayFeelsLike }) => {
   // SINAN PROTOCOL: REAL DATA MAPPING
   const chartData = hourlyData.slice(0, 24).map((h) => ({
-    time: h.time.split(':')[0],
+    time: h.time?.split(':')[0] || '00',
     temp: Math.round(h.temp),
     feelsLike: Math.round(h.feelsLike), // Real API feelsLike
     precipProb: h.precipProb,
@@ -238,7 +238,7 @@ const ForecastSection: React.FC<ForecastSectionProps> = ({ data, focusTomorrow =
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={dayHourlyData.map((h) => ({
-                time: h.time.split(':')[0],
+                time: h.time?.split(':')[0] || '00',
                 temp: Math.round(h.temp),
                 feelsLike: Math.round(h.feelsLike),
                 precipProb: h.precipProb,
@@ -401,7 +401,7 @@ const ForecastSection: React.FC<ForecastSectionProps> = ({ data, focusTomorrow =
                     </div>
                     {/* Column 5: Wind - Enhanced */}
                     <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-700/60 px-2 py-1.5 rounded-lg min-w-[60px] justify-center text-xs font-semibold text-slate-600 dark:text-slate-300">
-                      <Icon.Wind size={14} className="mr-1.5 text-slate-400" />{day.wind.split(' ')[0]}
+                      <Icon.Wind size={14} className="mr-1.5 text-slate-400" />{day.wind?.split(' ')[0] || '0'}
                     </div>
                     {/* Column 5b: Visibility (New) */}
                     <div className="hidden lg:flex items-center justify-center min-w-[60px] text-xs text-slate-500 gap-1" title="Görüş Mesafesi">
@@ -457,7 +457,7 @@ const ForecastSection: React.FC<ForecastSectionProps> = ({ data, focusTomorrow =
                       {day.rainProb !== undefined ? <><Icon.Droplets size={12} className="mr-1 text-blue-400" />{day.rainProb}%</> : <span className="text-slate-300">-</span>}
                     </div>
                     <div className="hidden sm:flex items-center justify-center min-w-[55px] text-xs text-slate-400">
-                      <Icon.Wind size={12} className="mr-1 text-slate-300" />{day.wind.split(' ')[0]}
+                      <Icon.Wind size={12} className="mr-1 text-slate-300" />{day.wind?.split(' ')[0] || '0'}
                     </div>
                     <div className="flex items-center space-x-2 min-w-[70px] justify-end">
                       <span className="text-slate-700 dark:text-slate-200 font-semibold">{Math.round(day.high)}°</span>
