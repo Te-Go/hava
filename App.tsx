@@ -565,11 +565,27 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     const fetchData = async () => {
       console.log('DEBUG: Payload City:', payload?.city, 'vs App City:', currentCity);
       if (payload && payload.weatherData) {
+        // 1. Transpose Open-Meteo's Daily Object into an Array of Objects
+        const rawDaily = payload.weatherData?.daily || {};
+        
+        // Check if it's already an array (e.g. from a different endpoint) or an object
+        const transformedDaily = Array.isArray(rawDaily) ? rawDaily : (rawDaily.time || []).map((dateStr: string, index: number) => ({
+            day: new Date(dateStr).toLocaleDateString('tr-TR', { weekday: 'short' }),
+            high: rawDaily.temperature_2m_max?.[index] || 0,
+            low: rawDaily.temperature_2m_min?.[index] || 0,
+            rainProb: rawDaily.precipitation_probability_max?.[index] || 0,
+            wind: rawDaily.wind_speed_10m_max?.[index] ? `${rawDaily.wind_speed_10m_max[index]} km/s` : '0 km/sa',
+            // Fallback for condition since Open-Meteo uses weathercode
+            condition: 'Açık', 
+            icon: rawDaily.weathercode?.[index]?.toString() || '0'
+        }));
+
         // SAFEGUARD: Inject missing properties into raw API data to prevent TypeErrors
         const safeWeatherData = {
             ...payload.weatherData,
             city: payload.city || currentCity, // Fixes toSlug(undefined) crash
-            icon: payload.weatherData.current_weather?.weathercode?.toString() || '' // Fixes .includes() crash
+            icon: payload.weatherData.current_weather?.weathercode?.toString() || '', // Fixes .includes() crash
+            daily: transformedDaily // <--- CRITICAL FIX: Override raw daily with our mapped array
         };
         
         setWeatherData(safeWeatherData);
