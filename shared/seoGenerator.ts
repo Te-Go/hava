@@ -44,7 +44,7 @@ export const generateMetaTitle = (city: string, timeframe: Timeframe = 'today'):
  * Includes: city, current condition, temperature range, rain probability.
  */
 export const generateMetaDescription = (city: string, data: WeatherData): string => {
-    const condition = data.condition.toLowerCase();
+    const condition = String(data.condition || '').toLowerCase();
     const high = Math.round(data.high);
     const low = Math.round(data.low);
     const rainProb = data.rainProb;

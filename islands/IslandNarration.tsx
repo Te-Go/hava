@@ -26,7 +26,7 @@ const IslandNarration: React.FC<IslandNarrationProps> = ({
     // Generate the opening statement
     const getOpeningStatement = () => {
         const categoryNames = activeCategories
-            .map(cat => ISLAND_CATEGORY_NAMES[cat].toLowerCase())
+            .map(cat => String(ISLAND_CATEGORY_NAMES[cat] || '').toLowerCase())
             .join(', ');
 
         return `${cityDisplay} için güncel ${categoryNames} bilgileri aşağıda özetlenmiştir.`;
@@ -182,7 +182,7 @@ export function generateIslandNarratives(
         case 'agriculture':
             const soilTemp = data?.soilTemp || 15;
             const moisture = data?.moistureLabel || 'Normal';
-            return `Toprak sıcaklığı ${soilTemp}°C, nem durumu ${moisture.toLowerCase()}.`;
+            return `Toprak sıcaklığı ${soilTemp}°C, nem durumu ${String(moisture || '').toLowerCase()}.`;
 
         case 'altitude':
             const elevation = data?.elevation || 1500;
@@ -191,12 +191,12 @@ export function generateIslandNarratives(
 
         case 'fireRisk':
             const risk = data?.riskLevel || 'Orta';
-            return `Yangın riski ${risk.toLowerCase()} seviyede.`;
+            return `Yangın riski ${String(risk || '').toLowerCase()} seviyede.`;
 
         case 'tourism':
             const comfort = data?.comfortLabel || 'Normal';
             const bestTime = data?.bestTimeToVisit || 'Öğleden Sonra';
-            return `Gezi konforu ${comfort.toLowerCase()}, en uygun zaman ${bestTime.toLowerCase()}.`;
+            return `Gezi konforu ${String(comfort || '').toLowerCase()}, en uygun zaman ${String(bestTime || '').toLowerCase()}.`;
 
         default:
             return `${cityName} için güncel bölgesel bilgiler yukarıda sunulmuştur.`;

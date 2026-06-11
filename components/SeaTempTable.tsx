@@ -33,10 +33,10 @@ const SeaTempTable: React.FC<SeaTempTableProps> = ({ locations, onLocationClick 
 
         // Filter by search query
         if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
+            const query = String(searchQuery || '').toLowerCase();
             result = result.filter(l =>
-                l.displayName.toLowerCase().includes(query) ||
-                l.city.toLowerCase().includes(query)
+                String(l.displayName || '').toLowerCase().includes(query) ||
+                String(l.city || '').toLowerCase().includes(query)
             );
         }
 

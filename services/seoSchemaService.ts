@@ -133,7 +133,7 @@ export function generateFAQSchema(
     const faqs = [
         {
             question: `${cityName}'da bugün hava nasıl?`,
-            answer: `${cityName}'da bugün hava ${data.condition.toLowerCase()}, sıcaklık ${Math.round(data.currentTemp)}°C. Yüksek ${Math.round(data.high)}°C, düşük ${Math.round(data.low)}°C bekleniyor.`
+            answer: `${cityName}'da bugün hava ${String(data.condition || '').toLowerCase()}, sıcaklık ${Math.round(data.currentTemp)}°C. Yüksek ${Math.round(data.high)}°C, düşük ${Math.round(data.low)}°C bekleniyor.`
         },
         {
             question: `${cityName}'da yarın hava nasıl olacak?`,
@@ -167,7 +167,7 @@ export function generateFAQSchema(
 
     faqs.splice(2, 0, { // Insert at position 3 (High Visibility)
         question: `${cityName} 5 günlük hava durumu nasıl?`,
-        answer: `${cityName} için 5 günlük hava durumu tahminine göre en yüksek sıcaklık ${maxTemp5}°C, en düşük ${minTemp5}°C olacak. ${fiveDays[0]?.day} günü ${condition5.toLowerCase()} bekleniyor.`
+        answer: `${cityName} için 5 günlük hava durumu tahminine göre en yüksek sıcaklık ${maxTemp5}°C, en düşük ${minTemp5}°C olacak. ${fiveDays[0]?.day} günü ${String(condition5 || '').toLowerCase()} bekleniyor.`
     });
 
     return {

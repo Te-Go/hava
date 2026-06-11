@@ -85,7 +85,7 @@ const SEOFAQSection: React.FC<SEOFAQSectionProps> = ({ cityName, data, className
     const faqs = [
         {
             question: `${cityName}'da bugün hava nasıl?`,
-            answer: `${cityName}'da bugün hava ${data.condition.toLowerCase()}, sıcaklık ${Math.round(data.currentTemp)}°C. Yüksek ${Math.round(data.high)}°C, düşük ${Math.round(data.low)}°C bekleniyor.`
+            answer: `${cityName}'da bugün hava ${String(data.condition || '').toLowerCase()}, sıcaklık ${Math.round(data.currentTemp)}°C. Yüksek ${Math.round(data.high)}°C, düşük ${Math.round(data.low)}°C bekleniyor.`
         },
         {
             question: `${cityName}'da yarın hava nasıl olacak?`,
