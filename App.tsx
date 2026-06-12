@@ -130,9 +130,20 @@ const sanitizeOpenMeteoPayload = (payload: any) => {
     }));
 
     // Transpose Hourly
-    const rawHourly = payload.weatherData.hourly || {};
+    const wd = payload.weatherData;
+    const rawHourly = wd.hourly || {};
+    
+    // Format timestamp helper
+    const formatTime = (t: string) => {
+        try {
+            return new Date(t).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        } catch (e) {
+            return t; // fallback
+        }
+    };
+
     const transformedHourly = Array.isArray(rawHourly) ? rawHourly : (rawHourly.time || []).map((t: string, i: number) => ({
-        time: t,
+        time: formatTime(t),
         temp: rawHourly.temperature_2m?.[i] || 0,
         feelsLike: rawHourly.temperature_2m?.[i] || 0, 
         precipProb: rawHourly.precipitation_probability?.[i] || 0,
@@ -144,11 +155,19 @@ const sanitizeOpenMeteoPayload = (payload: any) => {
         ...payload,
         city: payload.city,
         weatherData: {
-            ...payload.weatherData,
+            ...wd,
+            currentTemp: wd.currentTemp ?? wd.current_temp ?? 0,
+            windSpeed: wd.windSpeed ?? wd.wind_speed ?? 0,
+            windDirection: wd.windDirection ?? wd.wind_direction ?? '',
+            rainVolume: wd.rainVolume ?? wd.rain_volume ?? 0,
+            rainProb: wd.rainProb ?? wd.rain_prob ?? 0,
+            feelsLike: wd.feelsLike ?? wd.feels_like ?? 0,
+            cloudCover: wd.cloudCover ?? wd.cloud_cover ?? 0,
+            uvIndex: wd.uvIndex ?? wd.uv_index ?? 0,
             daily: transformedDaily,
             hourly: transformedHourly,
             city: payload.city,
-            icon: payload.weatherData.current_weather?.weathercode?.toString() || ''
+            icon: wd.current_weather?.weathercode?.toString() || wd.icon || ''
         }
     };
 };
@@ -931,7 +950,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen flex flex-col font-sans text-slate-800 dark:text-slate-200 selection:bg-blue-200 selection:text-blue-900 transition-colors duration-500">
+      <div className={`w-full min-h-screen flex flex-col font-sans text-slate-800 dark:text-slate-200 dark:bg-slate-900 selection:bg-blue-200 selection:text-blue-900 transition-colors duration-500 ${isDarkMode ? 'dark' : ''}`}>
         {/* LAUNCH PHASE: TopBar disabled for first 6 weeks. Reactivate after mid-February 2025
         <TopBar tickers={marketData} currentTemp={weatherData?.currentTemp} onHomeClick={() => setView({ type: 'home' })} position="top" />
         */}
