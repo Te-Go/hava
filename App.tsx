@@ -156,9 +156,9 @@ const sanitizeOpenMeteoPayload = (payload: any) => {
         city: payload.city,
         weatherData: {
             ...wd,
-            currentTemp: wd.currentTemp ?? wd.current_temp ?? 0,
-            windSpeed: wd.windSpeed ?? wd.wind_speed ?? 0,
-            windDirection: wd.windDirection ?? wd.wind_direction ?? '',
+            currentTemp: wd.current_weather?.temperature ?? wd.currentTemp ?? wd.current_temp ?? 0,
+            windSpeed: wd.current_weather?.windspeed ?? wd.windSpeed ?? wd.wind_speed ?? 0,
+            windDirection: wd.current_weather?.winddirection ?? wd.windDirection ?? wd.wind_direction ?? '',
             rainVolume: wd.rainVolume ?? wd.rain_volume ?? 0,
             rainProb: wd.rainProb ?? wd.rain_prob ?? 0,
             feelsLike: wd.feelsLike ?? wd.feels_like ?? 0,
@@ -177,6 +177,10 @@ const safeInitialPayload = typeof window !== 'undefined' && (window as any).Sina
     ? sanitizeOpenMeteoPayload((window as any).SinanWeatherPayload) 
     : null;
 const INITIAL_WEATHER_DATA = safeInitialPayload?.weatherData || null;
+
+if (typeof window !== 'undefined') {
+    console.log("Current Payload:", (window as any).SinanWeatherPayload);
+}
 
 
 const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
@@ -270,15 +274,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       return { city: getCityById(locationId), view: 'home' };
     }
 
-    // 🏳️ PRIORITY 5: Client Side Persistence (localStorage)
-    if (typeof window !== 'undefined') {
-      const prefs = getUserPreferences();
-      if (prefs.lastCity) {
-        return { city: prefs.lastCity, view: 'home' };
-      }
-    }
-
-    // 🏳️ FALLBACK: Default State
+    // 🏳️ FALLBACK: Default State (SEO Baseline)
     return { city: 'İstanbul', view: 'home' };
   };
 
@@ -315,6 +311,18 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   useEffect(() => {
     console.log('🔴 [STATE-CHANGE] currentCity is now:', currentCity);
   }, [currentCity]);
+
+  // SMART HYDRATION STATE (KVKK COMPLIANT)
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path === '/' || path === '/hava-durumu' || path === '/hava-durumu/') {
+      const prefs = getUserPreferences();
+      const lastCity = localStorage.getItem('last_visited_city') || prefs.lastCity;
+      if (prefs.consentStatus === 'accepted' && lastCity && lastCity !== 'İstanbul') {
+        setCurrentCity(lastCity);
+      }
+    }
+  }, []);
 
   // THEME STATE INITIALIZATION (Lazy Initializer)
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -711,8 +719,12 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     const prettyName = fromSlug(toSlug(newCity));
     setCurrentCity(prettyName);
 
-    // Save to LocalStorage
-    saveUserPreferences({ lastCity: prettyName });
+    // Save to LocalStorage ONLY if consent is granted (KVKK Compliance)
+    const prefs = getUserPreferences();
+    if (prefs.consentStatus === 'accepted') {
+      saveUserPreferences({ lastCity: prettyName });
+      localStorage.setItem('last_visited_city', prettyName);
+    }
 
     const slug = toSlug(prettyName);
     // SINAN SILO PROTOCOL: /hava-durumu/city/view
