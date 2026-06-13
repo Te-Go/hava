@@ -130,8 +130,8 @@ class TedderDataEngine {
             $slug = $province['slug'];
             
             // Replicate Open-Meteo external service calls via server context
-            $api_url  = "https://api.open-meteo.com/v1/forecast?latitude={$province['lat']}&longitude={$province['lon']}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m";
-            $response = wp_remote_get( $api_url, array( 'timeout' => 10 ) );
+            $api_url  = "https://api.open-meteo.com/v1/forecast?latitude={$province['lat']}&longitude={$province['lon']}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto";
+            $response = wp_remote_get( $api_url, array( 'timeout' => 10, 'sslverify' => false ) );
 
             if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
                 error_log( "Tedder Data Engine Error: Failed background sync for province: {$slug}" );

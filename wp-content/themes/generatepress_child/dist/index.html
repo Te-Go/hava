@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+  <meta name="description"
+    content="Türkiye'nin en kapsamlı hava durumu platformu. 15 günlük tahminler, meteoroloji haritaları, tarım ve denizcilik raporları." />
+  <title>Hava Durumu | TG Dijital</title>
+
+  <!-- Favicon / App Icons -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/wp-content/themes/generatepress_child/dist/site.webmanifest">
+  <meta name="theme-color" content="#0f172a">
+
+  <!-- Security: Content Security Policy (CSP) -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://api.tomtom.com https://www.googletagmanager.com https://www.google-analytics.com https://pagead2.googlesyndication.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    img-src 'self' data: https: blob:;
+    font-src 'self' https://fonts.gstatic.com;
+    connect-src 'self' https://api.tomtom.com https://api.open-meteo.com https://geocoding-api.open-meteo.com https://archive-api.open-meteo.com https://marine-api.open-meteo.com https://air-quality-api.open-meteo.com https://flood-api.open-meteo.com https://elevation-api.open-meteo.com https://www.google-analytics.com https://pagead2.googlesyndication.com;
+    frame-src 'self' https://googleads.g.doubleclick.net https://embed.windy.com;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+  ">
+
+  <!-- Performance: Preconnect to CDNs & APIs -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn-icons-png.flaticon.com">
+  <link rel="preconnect" href="https://picsum.photos">
+  <link rel="preconnect" href="https://api.open-meteo.com">
+
+  <!-- Google Fonts: Preload to avoid render blocking -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap"
+    as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&display=swap"
+      rel="stylesheet">
+  </noscript>
+
+
+
+  <!-- CRITICAL: Dark Mode "No-Flash" Script -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('tg_user_prefs');
+        var theme = 'system';
+        if (saved) {
+          theme = JSON.parse(saved).theme;
+        }
+
+        if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) { }
+    })();
+  </script>
+
+  <!-- JSON-LD Structured Data for Weather Website -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://hava-durumlari.tr/#website",
+          "url": "https://hava-durumlari.tr/",
+          "name": "Hava Durumu Türkiye",
+          "description": "Türkiye'nin en kapsamlı hava durumu platformu",
+          "publisher": {
+            "@id": "https://hava-durumlari.tr/#organization"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://hava-durumlari.tr/sehir/{search_term_string}",
+            "query-input": "required name=search_term_string"
+          },
+          "inLanguage": "tr-TR"
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://hava-durumlari.tr/#organization",
+          "name": "TG Dijital",
+          "url": "https://hava-durumlari.tr/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://hava-durumlari.tr/logo.png"
+          },
+          "sameAs": [
+            "https://twitter.com/tgdijital",
+            "https://facebook.com/tgdijital"
+          ]
+        },
+        {
+          "@type": "WebApplication",
+          "@id": "https://hava-durumlari.tr/#app",
+          "name": "Hava Durumu Türkiye",
+          "applicationCategory": "WeatherApplication",
+          "operatingSystem": "Web Browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "TRY"
+          },
+          "featureList": [
+            "15 günlük hava durumu tahmini",
+            "Saatlik hava durumu",
+            "UV indeksi",
+            "Hava kalitesi (AQI)",
+            "Meteoroloji radar haritaları",
+            "Yaşam tarzı indeksleri"
+          ]
+        },
+        {
+          "@type": "Service",
+          "@id": "https://hava-durumlari.tr/#service",
+          "serviceType": "Weather Forecast",
+          "provider": {
+            "@id": "https://hava-durumlari.tr/#organization"
+          },
+          "areaServed": {
+            "@type": "Country",
+            "name": "Türkiye"
+          },
+          "description": "Türkiye geneli için güncel hava durumu tahminleri, 15 günlük öngörüler, UV indeksi, hava kalitesi ve yaşam tarzı önerileri sunan ücretsiz meteoroloji hizmeti."
+        }
+      ]
+    }
+  </script>
+
+
+
+  <!-- Tailwind CSS processed by Vite/PostCSS - NO CDN -->
+  <script type="module" crossorigin src="/wp-content/themes/generatepress_child/dist/bundle.js"></script>
+  <link rel="stylesheet" crossorigin href="/wp-content/themes/generatepress_child/dist/index.css">
+</head>
+
+<body>
+  <!-- 
+       Server Side Injection Simulation:
+       data-location-id="34" corresponds to Istanbul (Plate Code or DB ID)
+    -->
+  <div id="weather-app" data-location-id="34"></div>
+
+  <!-- Performance: Speculation Rules API for Instant Page Changes -->
+  <!-- "Conservative" Eagerness saves data by waiting for slight hover intent -->
+  <script type="speculationrules">
+  {
+    "prerender": [
+      {
+        "source": "document",
+        "where": {
+          "selector_matches": "a[href^='/hava-durumu']" 
+        },
+        "eagerness": "conservative"
+      }
+    ]
+  }
+  </script>
+</body>
+
+</html>
