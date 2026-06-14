@@ -130,7 +130,7 @@ class TedderDataEngine {
             $slug = $province['slug'];
             
             // Replicate Open-Meteo external service calls via server context
-            $api_url  = "https://api.open-meteo.com/v1/forecast?latitude={$province['lat']}&longitude={$province['lon']}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto";
+            $api_url  = "https://api.open-meteo.com/v1/forecast?latitude={$province['lat']}&longitude={$province['lon']}&current_weather=true&current=apparent_temperature,relative_humidity_2m,surface_pressure&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max&timezone=auto&forecast_days=16";
             $response = wp_remote_get( $api_url, array( 'timeout' => 10, 'sslverify' => false ) );
 
             if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {

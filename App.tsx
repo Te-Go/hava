@@ -161,9 +161,13 @@ const sanitizeOpenMeteoPayload = (payload: any) => {
             windDirection: wd.current_weather?.winddirection ?? wd.windDirection ?? wd.wind_direction ?? '',
             rainVolume: wd.rainVolume ?? wd.rain_volume ?? 0,
             rainProb: wd.rainProb ?? wd.rain_prob ?? 0,
-            feelsLike: wd.feelsLike ?? wd.feels_like ?? 0,
+            feelsLike: wd.current?.apparent_temperature ?? wd.feelsLike ?? wd.feels_like ?? 0,
+            humidity: wd.current?.relative_humidity_2m ?? wd.humidity ?? 0,
+            pressure: wd.current?.surface_pressure ?? wd.pressure ?? 0,
             cloudCover: wd.cloudCover ?? wd.cloud_cover ?? 0,
-            uvIndex: wd.uvIndex ?? wd.uv_index ?? 0,
+            uvIndex: wd.daily?.uv_index_max?.[0] ?? wd.uvIndex ?? wd.uv_index ?? 0,
+            sunrise: wd.daily?.sunrise?.[0] ?? wd.sunrise ?? '',
+            sunset: wd.daily?.sunset?.[0] ?? wd.sunset ?? '',
             daily: transformedDaily,
             hourly: transformedHourly,
             city: payload.city,
@@ -312,7 +316,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     console.log('🔴 [STATE-CHANGE] currentCity is now:', currentCity);
   }, [currentCity]);
 
-  // SMART HYDRATION STATE (KVKK COMPLIANT)
+  // SMART HYDRATION STATE (KVKK COMPLIANT) & STRICT ROOT ROUTING
   useEffect(() => {
     const path = window.location.pathname;
     if (path === '/' || path === '/hava-durumu' || path === '/hava-durumu/') {
@@ -320,6 +324,10 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       const lastCity = localStorage.getItem('last_visited_city') || prefs.lastCity;
       if (prefs.consentStatus === 'accepted' && lastCity && lastCity !== 'İstanbul') {
         setCurrentCity(lastCity);
+        window.history.replaceState({ city: lastCity }, '', `/hava-durumu/${toSlug(lastCity)}`);
+      } else {
+        setCurrentCity('İstanbul');
+        window.history.replaceState({ city: 'İstanbul' }, '', '/hava-durumu/istanbul');
       }
     }
   }, []);
