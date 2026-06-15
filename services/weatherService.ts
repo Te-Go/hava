@@ -626,8 +626,8 @@ export const fromSlug = (slug: string): string => {
     return TURKISH_NAMES[sanitized];
   }
 
-  // Fallback: Strict dictionary lookup only. Default to İstanbul if not found to prevent mutation loops.
-  return 'İstanbul';
+  // Fallback: Generic unslugify (Title Case) - for unknown locations
+  return sanitized.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
 // --- GEOCODING FALLBACK ---
