@@ -655,6 +655,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
       // If the city changed via search bar, fetch new data since payload is stale
       if (!payload || toSlug(payload.city) !== toSlug(currentCity)) {
+        if (loading && weatherData) return; // STRICT LOOP GUARD
         setLoading(true);
         try {
           const newWeatherData = await getWeatherData(currentCity);

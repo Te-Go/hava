@@ -147,29 +147,15 @@ export const initAds = () => {
 const MAX_SLUG_LENGTH = 100;
 
 export const toSlug = (text: string): string => {
-  // Security: Validate input
   if (!text || typeof text !== 'string') return '';
-
-  // Security: Limit length to prevent buffer/memory issues
-  const sanitized = text.slice(0, MAX_SLUG_LENGTH).trim();
-
-  // Handle uppercase Turkish characters BEFORE toLowerCase to prevent the combining dot anomaly
-  const replaced = sanitized
-    .replace(/İ/g, 'i')
+  return text.slice(0, MAX_SLUG_LENGTH).trim()
+    .replace(/İ/g, 'i').replace(/ı/g, 'i').replace(/Ş/g, 's').replace(/ş/g, 's')
+    .replace(/Ğ/g, 'g').replace(/ğ/g, 'g').replace(/Ç/g, 'c').replace(/ç/g, 'c')
+    .replace(/Ö/g, 'o').replace(/ö/g, 'o').replace(/Ü/g, 'u').replace(/ü/g, 'u')
     .replace(/I/g, 'i')
-    .replace(/Ş/g, 's')
-    .replace(/Ğ/g, 'g')
-    .replace(/Ç/g, 'c')
-    .replace(/Ö/g, 'o')
-    .replace(/Ü/g, 'u');
-
-  const lower = replaced.toLowerCase();
-
-  // Handle remaining lowercase Turkish characters
-  const map: { [key: string]: string } = {
-    'ç': 'c', 'ğ': 'g', 'ş': 's', 'ü': 'u', 'ı': 'i', 'ö': 'o'
-  };
-  return lower.replace(/[çğşüıö]/g, (char) => map[char] || char).replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 };
 
 export const fromSlug = (slug: string): string => {
@@ -640,8 +626,8 @@ export const fromSlug = (slug: string): string => {
     return TURKISH_NAMES[sanitized];
   }
 
-  // Fallback: Generic unslugify (Title Case) - for unknown locations
-  return sanitized.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  // Fallback: Strict dictionary lookup only. Default to İstanbul if not found to prevent mutation loops.
+  return 'İstanbul';
 };
 
 // --- GEOCODING FALLBACK ---
