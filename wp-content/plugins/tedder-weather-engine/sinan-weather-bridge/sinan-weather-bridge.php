@@ -114,9 +114,10 @@ class SinanWeatherBridge {
             return;
         }
 
-        $city_slug = get_query_var('weather_city') ? sanitize_title(get_query_var('weather_city')) : 'istanbul';
+        $raw_city = get_query_var('weather_city') ? get_query_var('weather_city') : (isset($_GET['city']) ? $_GET['city'] : 'istanbul');
+        $slug = strtolower(sanitize_title($raw_city));
         $cache_dir = wp_upload_dir()['basedir'] . '/sinan-weather-cache';
-        $live_file = "{$cache_dir}/{$city_slug}.json";
+        $live_file = "{$cache_dir}/{$slug}.json";
         
         $weather_payload = null;
         $is_valid_cache = false;
@@ -135,10 +136,10 @@ class SinanWeatherBridge {
         if ( ! $is_valid_cache ) {
             // Fallback coordinate mapping for the root/default
             $lat = 41.0082; $lon = 28.9784; 
-            if ($city_slug === 'antalya') { $lat = 36.8969; $lon = 30.7133; }
+            if ($slug === 'antalya') { $lat = 36.8969; $lon = 30.7133; }
             
             // Add daily forecast to ensure the React app has full data
-            $api_url  = "https://api.open-meteo.com/v1/forecast?latitude={$lat}&longitude={$lon}&current_weather=true&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto";
+            $api_url  = "https://api.open-meteo.com/v1/forecast?latitude={$lat}&longitude={$lon}&current_weather=true&current=apparent_temperature,relative_humidity_2m,surface_pressure&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max&timezone=auto&forecast_days=16";
             
             $response = wp_remote_get( $api_url, array( 'timeout' => 10, 'sslverify' => false ) );
 
@@ -164,7 +165,7 @@ class SinanWeatherBridge {
 
         // 4. Construct the Payloads
         $payload_array = array(
-            'city' => $city_slug,
+            'city' => $slug,
             'locationId' => 0,
             'weatherData' => json_decode( $weather_payload, true ),
             'modules' => array( 'showTraffic' => true, 'showMarine' => true, 'showSki' => true )

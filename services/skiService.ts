@@ -326,22 +326,11 @@ function generateSkiNarrative(
     return narrative;
 }
 
-// Normalize Turkish characters for key lookup
-function normalizeSkiKey(str: string): string {
-    return str.toLowerCase()
-        .replace(/ı/g, 'i')
-        .replace(/ş/g, 's')
-        .replace(/ğ/g, 'g')
-        .replace(/ü/g, 'u')
-        .replace(/ö/g, 'o')
-        .replace(/ç/g, 'c');
-}
-
 /**
  * Check if city (or resort name) has a ski resort
  */
 export function hasSkiResort(city: string): boolean {
-    const cityKey = normalizeSkiKey(city);
+    const cityKey = toSlug(city);
     return cityKey in SKI_RESORTS || cityKey in RESORT_TO_CITY;
 }
 
@@ -350,7 +339,7 @@ export function hasSkiResort(city: string): boolean {
  * If already a city key, returns it as-is.
  */
 export function resolveSkiCityKey(city: string): string {
-    const cityKey = normalizeSkiKey(city);
+    const cityKey = toSlug(city);
     if (cityKey in SKI_RESORTS) return cityKey;
     return RESORT_TO_CITY[cityKey] || cityKey;
 }

@@ -9,6 +9,8 @@
  * 4. City-specific calibration (Istanbul heavier than Ankara)
  */
 
+import { toSlug } from './weatherService';
+
 export interface TrafficData {
     congestionLevel: 'low' | 'medium' | 'high' | 'severe';
     congestionPercent: number;  // 0-100
@@ -224,9 +226,10 @@ function getDayName(): string {
 }
 
 /**
- * Check if a city has traffic widget enabled
+ * Check if a city has * - Live accident/incident flags
  */
+import { toSlug } from './weatherService';
 export function isMetroCity(city: string): boolean {
-    const cityKey = city.toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g');
+    const cityKey = toSlug(city);
     return Object.keys(CITY_MULTIPLIERS).includes(cityKey);
 }

@@ -10,6 +10,7 @@
  * - Evapotranspiration (irrigation need)
  * - Frost risk calculation
  */
+import { toSlug } from './weatherService';
 
 export interface AgricultureData {
     soilTemp: number;           // °C at 0-7cm depth
@@ -170,7 +171,6 @@ export function isAgricultureRegion(cityName: string): boolean {
     ];
 
     return agricultureProvinces.some(p =>
-        p.toLowerCase() === cityName.toLowerCase() ||
-        cityName.toLowerCase().includes(p.toLowerCase())
+        toSlug(p) === toSlug(cityName)
     );
 }

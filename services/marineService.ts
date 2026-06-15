@@ -6,6 +6,7 @@
  * IMPORTANT: The Marine API only provides wave data.
  * Sea surface temperature comes from hourly variables.
  */
+import { toSlug } from './weatherService';
 
 const MARINE_API_BASE = 'https://marine-api.open-meteo.com/v1/marine';
 
@@ -86,13 +87,7 @@ const COASTAL_COORDS: Record<string, { lat: number; lon: number }> = {
  * Normalize city name for lookup
  */
 function normalizeCity(city: string): string {
-    return city.toLowerCase()
-        .replace(/ı/g, 'i')
-        .replace(/ş/g, 's')
-        .replace(/ğ/g, 'g')
-        .replace(/ü/g, 'u')
-        .replace(/ö/g, 'o')
-        .replace(/ç/g, 'c');
+    return toSlug(city);
 }
 
 /**

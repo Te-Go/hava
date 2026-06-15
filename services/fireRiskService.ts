@@ -4,6 +4,7 @@
  * Calculates Fire Weather Index (FWI) for forest-heavy regions.
  * Active only during fire season: May - October.
  */
+import { toSlug } from './weatherService';
 
 export interface FireRiskData {
     fireIndex: number;          // 1-5 scale
@@ -148,7 +149,7 @@ export function isFireRiskRegion(cityName: string): boolean {
     ];
 
     return fireRiskProvinces.some(p =>
-        p.toLowerCase() === cityName.toLowerCase()
+        toSlug(p) === toSlug(cityName)
     );
 }
 

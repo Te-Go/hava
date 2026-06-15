@@ -5,6 +5,8 @@
  * Calculates thin air warnings, extreme cold alerts, and road conditions.
  */
 
+import { toSlug } from './weatherService';
+
 export interface AltitudeData {
     elevation: number;          // Meters above sea level
     elevationLabel: string;     // "Yüksek Yayla" / "Dağlık Bölge"
@@ -125,7 +127,7 @@ export function isAltitudeRegion(cityName: string): boolean {
     ];
 
     return altitudeProvinces.some(p =>
-        p.toLowerCase() === cityName.toLowerCase()
+        toSlug(p) === toSlug(cityName)
     );
 }
 

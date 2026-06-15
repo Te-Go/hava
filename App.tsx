@@ -196,7 +196,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     // If PHP (Asset Loader) injected the data object, use it.
     if (typeof window !== 'undefined' && (window as any).SinanWeatherPayload) {
       return {
-        city: (window as any).SinanWeatherPayload.city || 'İstanbul',
+        city: toSlug((window as any).SinanWeatherPayload.city || 'istanbul'),
         view: 'home'
       };
     }
@@ -207,7 +207,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       const root = document.getElementById('weather-app');
       if (root?.dataset.initialCity) {
         return {
-          city: root.dataset.initialCity,
+          city: toSlug(root.dataset.initialCity),
           view: (root.dataset.initialView as 'home' | 'tomorrow' | '15-days') || 'home'
         };
       }
@@ -220,13 +220,13 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
       // TOP LEVEL ROUTE EXCEPTIONS (Before /hava-durumu/ checks)
       if (path === '/deniz-suyu-sicakligi' || path === '/deniz-suyu-sicakligi/') {
-        return { city: 'İstanbul', view: 'sea-temp' };
+        return { city: 'istanbul', view: 'sea-temp' };
       }
 
       if (path === '/15-gunluk' || path === '/15-gunluk/') {
         // Retrieve last city or default to Istanbul
         const prefs = getUserPreferences();
-        const city = prefs.lastCity || 'İstanbul';
+        const city = prefs.lastCity ? toSlug(prefs.lastCity) : 'istanbul';
         return { city, view: '15-days' };
       }
 
@@ -267,7 +267,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
             // Legacy fallback: redirect old weekend URLs to home
             else if (path.includes('/hafta-sonu')) view = 'home';
 
-            return { city: fromSlug(rawSlug), view, ...parentParams };
+            return { city: toSlug(rawSlug), view, ...parentParams };
           }
         }
       }
@@ -275,11 +275,11 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
     // 🏳️ PRIORITY 4: Server Context (WordPress locationId prop)
     if (locationId > 0) {
-      return { city: getCityById(locationId), view: 'home' };
+      return { city: toSlug(getCityById(locationId)), view: 'home' };
     }
 
     // 🏳️ FALLBACK: Default State (SEO Baseline)
-    return { city: 'İstanbul', view: 'home' };
+    return { city: 'istanbul', view: 'home' };
   };
 
   // Initialize state from bulletproof hydration
@@ -323,16 +323,16 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
     if (segments[0] === 'hava-durumu' && segments[1] && segments[1] !== 'yarin' && segments[1] !== '15-gunluk' && segments[1] !== 'hafta-sonu') {
       const slugCity = segments[1];
-      setCurrentCity(fromSlug(slugCity));
+      setCurrentCity(toSlug(slugCity));
     } else if (path === '/' || path === '/hava-durumu' || path === '/hava-durumu/') {
       const prefs = getUserPreferences();
       const lastCity = localStorage.getItem('last_visited_city') || prefs.lastCity;
-      if (prefs.consentStatus === 'accepted' && lastCity && lastCity !== 'İstanbul') {
-        setCurrentCity(lastCity);
+      if (prefs.consentStatus === 'accepted' && lastCity && toSlug(lastCity) !== 'istanbul') {
+        setCurrentCity(toSlug(lastCity));
         window.history.replaceState({ city: lastCity }, '', `/hava-durumu/${toSlug(lastCity)}`);
       } else {
-        setCurrentCity('İstanbul');
-        window.history.replaceState({ city: 'İstanbul' }, '', '/hava-durumu/istanbul');
+        setCurrentCity('istanbul');
+        window.history.replaceState({ city: 'istanbul' }, '', '/hava-durumu/istanbul');
       }
     }
   }, []);
@@ -421,7 +421,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           const weatherData = await getWeatherDataByCoords(latitude, longitude, localityName);
 
           // 3. Update state
-          setCurrentCity(localityName);
+          setCurrentCity(toSlug(localityName));
           setWeatherData(weatherData);
 
           // 4. Update URL (SEO-friendly)
@@ -739,7 +739,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     // SINAN STANDARD TITLE FORMAT - Must match PHP SEO Engine exactly
     if (!weatherData) return;
 
-    const cityDisplay = fromSlug(toSlug(currentCity)); // Ensure Turkish chars (İstanbul not Istanbul)
+    const cityDisplay = fromSlug(currentCity); // Ensure Turkish chars (İstanbul not Istanbul)
 
     // Dynamic month name for SEO freshness
     const monthNames = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -766,8 +766,8 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   }, [weatherData, view.type, currentCity, isManualTheme, loading]);
 
   const handleCityChange = (newCity: string) => {
-    const prettyName = fromSlug(toSlug(newCity));
-    setCurrentCity(prettyName);
+    const prettyName = fromSlug(newCity);
+    setCurrentCity(toSlug(newCity));
 
     // Save to LocalStorage ONLY if consent is granted (KVKK Compliance)
     const prefs = getUserPreferences();
@@ -826,7 +826,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     }
     else if (dest.startsWith('city:')) {
       const city = dest.split(':')[1];
-      setCurrentCity(city);
+      setCurrentCity(toSlug(city));
       setView({ type: 'home' });
       window.history.pushState({ city }, '', `/hava-durumu/${toSlug(city)}`);
     }
@@ -846,7 +846,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
         return (
           <>
             <Navigation
-              currentCity={currentCity}
+              currentCity={fromSlug(currentCity)}
               onCityChange={handleCityChange}
               onLocationClick={handleUseLocation}
               isDarkMode={isDarkMode}
@@ -862,18 +862,18 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
             <div className="max-w-4xl mx-auto px-4 mt-2 mb-3 flex flex-col md:flex-row md:items-end md:justify-between gap-2 md:gap-6">
               <h1 className="text-xl md:text-2xl font-bold text-slate-800 dark:text-white leading-tight flex-shrink-0">
                 {view.type === 'tomorrow'
-                  ? `${currentCity} Yarınki Hava Durumu`
+                  ? `${fromSlug(currentCity)} Yarınki Hava Durumu`
                   : view.type === '15-days'
-                    ? `${currentCity} 15 Günlük Hava Durumu Tahmini`
-                    : `${currentCity} Hava Durumu`
+                    ? `${fromSlug(currentCity)} 15 Günlük Hava Durumu Tahmini`
+                    : `${fromSlug(currentCity)} Hava Durumu`
                 }
               </h1>
               <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 md:text-right md:max-w-lg leading-snug">
                 {view.type === 'tomorrow'
-                  ? `${currentCity} için yarınki hava durumu tahmin raporu ve detaylı meteoroloji verileri.`
+                  ? `${fromSlug(currentCity)} için yarınki hava durumu tahmin raporu ve detaylı meteoroloji verileri.`
                   : view.type === '15-days'
-                    ? `${currentCity} 15 günlük hava durumu trendi, sıcaklık değişimi ve yağış beklentisi.`
-                    : `${currentCity} güncel hava durumu ve detaylı tahminler. Anlık sıcaklık ve rüzgar verileri.`
+                    ? `${fromSlug(currentCity)} 15 günlük hava durumu trendi, sıcaklık değişimi ve yağış beklentisi.`
+                    : `${fromSlug(currentCity)} güncel hava durumu ve detaylı tahminler. Anlık sıcaklık ve rüzgar verileri.`
                 }
               </p>
             </div>
@@ -938,7 +938,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                         altitude={altitudeData}
                         fireRisk={fireRiskData}
                         tourism={tourismData}
-                        cityDisplay={currentCity}
+                        cityDisplay={fromSlug(currentCity)}
                         trafficCityDisplay={trafficCityDisplay}
                         marineCityDisplay={marineCityDisplay}
                         fallbackNarrative={generateWeatherCommentary(displayData, view.type === 'tomorrow' ? 'tomorrow' : 'today').answerBlock}

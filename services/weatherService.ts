@@ -151,15 +151,25 @@ export const toSlug = (text: string): string => {
   if (!text || typeof text !== 'string') return '';
 
   // Security: Limit length to prevent buffer/memory issues
-  const sanitized = text.slice(0, MAX_SLUG_LENGTH);
-  const lower = sanitized.toLowerCase().trim();
+  const sanitized = text.slice(0, MAX_SLUG_LENGTH).trim();
 
-  // Turkish character mapping to ASCII
+  // Handle uppercase Turkish characters BEFORE toLowerCase to prevent the combining dot anomaly
+  const replaced = sanitized
+    .replace(/İ/g, 'i')
+    .replace(/I/g, 'i')
+    .replace(/Ş/g, 's')
+    .replace(/Ğ/g, 'g')
+    .replace(/Ç/g, 'c')
+    .replace(/Ö/g, 'o')
+    .replace(/Ü/g, 'u');
+
+  const lower = replaced.toLowerCase();
+
+  // Handle remaining lowercase Turkish characters
   const map: { [key: string]: string } = {
-    'ç': 'c', 'Ç': 'c', 'ğ': 'g', 'Ğ': 'g', 'ş': 's', 'Ş': 's',
-    'ü': 'u', 'Ü': 'u', 'ı': 'i', 'İ': 'i', 'ö': 'o', 'Ö': 'o'
+    'ç': 'c', 'ğ': 'g', 'ş': 's', 'ü': 'u', 'ı': 'i', 'ö': 'o'
   };
-  return lower.replace(/[çğşüıöÇĞŞÜİÖ]/g, (char) => map[char] || char).replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
+  return lower.replace(/[çğşüıö]/g, (char) => map[char] || char).replace(/[^a-z0-9 -]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-');
 };
 
 export const fromSlug = (slug: string): string => {
