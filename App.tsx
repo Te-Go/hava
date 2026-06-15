@@ -651,19 +651,56 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
     const fetchData = async () => {
       console.log('DEBUG: Payload City:', payload?.city, 'vs App City:', currentCity);
-      if (payload && payload.weatherData) {
+      let finalPayload = payload;
+
+      // If the city changed via search bar, fetch new data since payload is stale
+      if (!payload || toSlug(payload.city) !== toSlug(currentCity)) {
+        setLoading(true);
+        try {
+          const newWeatherData = await getWeatherData(currentCity);
+          finalPayload = { city: currentCity, weatherData: newWeatherData };
+        } catch (err) {
+          console.error("Failed to fetch new city data:", err);
+          finalPayload = null;
+        }
+      }
+
+      if (finalPayload && finalPayload.weatherData) {
         // Use the global sanitizer to get transposed daily and hourly data
-        const sanitized = sanitizeOpenMeteoPayload(payload);
+        const sanitized = sanitizeOpenMeteoPayload(finalPayload);
         const safeWeatherData = sanitized.weatherData;
         
         setWeatherData(safeWeatherData);
-        setTrafficData(payload.weatherData.trafficData || null);
-        setMarineData(payload.weatherData.marineData || null);
-        setSkiData(payload.weatherData.skiData || null);
-        setAgricultureData(payload.weatherData.agricultureData || null);
-        setAltitudeData(payload.weatherData.altitudeData || null);
-        setFireRiskData(payload.weatherData.fireRiskData || null);
-        setTourismData(payload.weatherData.tourismData || null);
+
+        // HYDRATE ISLAND WIDGETS
+        if (isMetroCity(currentCity)) {
+           fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));
+        } else setTrafficData(null);
+
+        if (isCoastalCity(currentCity)) {
+           fetchMarineData(currentCity).then(setMarineData).catch(() => setMarineData(null));
+        } else setMarineData(null);
+
+        if (hasSkiResort(currentCity)) {
+           setSkiData(calculateSkiConditions(currentCity, safeWeatherData.currentTemp, safeWeatherData.rainVolume || 0, safeWeatherData.windSpeed, safeWeatherData.cloudCover || 0));
+        } else setSkiData(null);
+
+        if (isAgricultureRegion(currentCity)) {
+           fetchAgricultureData(currentCity).then(setAgricultureData).catch(() => setAgricultureData(null));
+        } else setAgricultureData(null);
+
+        if (isAltitudeRegion(currentCity)) {
+           const minTemp = safeWeatherData.daily?.[0]?.low || 0;
+           setAltitudeData(calculateAltitudeData(getProvinceElevation(currentCity), safeWeatherData.currentTemp, safeWeatherData.feelsLike, [minTemp], safeWeatherData.windSpeed, safeWeatherData.rainVolume || 0));
+        } else setAltitudeData(null);
+
+        if (isFireRiskRegion(currentCity)) {
+           setFireRiskData(calculateFireRisk(safeWeatherData.humidity, safeWeatherData.windSpeed, safeWeatherData.currentTemp, safeWeatherData.rainVolume || 0));
+        } else setFireRiskData(null);
+
+        if (isTourismRegion(currentCity)) {
+           setTourismData(calculateTourismComfort(safeWeatherData.currentTemp, safeWeatherData.humidity, safeWeatherData.uvIndex, currentCity));
+        } else setTourismData(null);
 
         // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
         if (safeWeatherData && !isManualTheme && !loading && toSlug(safeWeatherData.city) === toSlug(currentCity)) {
