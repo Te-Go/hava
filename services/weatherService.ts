@@ -149,13 +149,13 @@ const MAX_SLUG_LENGTH = 100;
 export const toSlug = (text: string): string => {
   if (!text || typeof text !== 'string') return '';
   return text.slice(0, MAX_SLUG_LENGTH).trim()
-    .replace(/İ/g, 'i').replace(/ı/g, 'i').replace(/Ş/g, 's').replace(/ş/g, 's')
-    .replace(/Ğ/g, 'g').replace(/ğ/g, 'g').replace(/Ç/g, 'c').replace(/ç/g, 'c')
-    .replace(/Ö/g, 'o').replace(/ö/g, 'o').replace(/Ü/g, 'u').replace(/ü/g, 'u')
-    .replace(/I/g, 'i')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/\u0130/g, 'i').replace(/\u0131/g, 'i')
+    .replace(/\u015E/g, 's').replace(/\u015F/g, 's')
+    .replace(/\u011E/g, 'g').replace(/\u011F/g, 'g')
+    .replace(/\u00C7/g, 'c').replace(/\u00E7/g, 'c')
+    .replace(/\u00D6/g, 'o').replace(/\u00F6/g, 'o')
+    .replace(/\u00DC/g, 'u').replace(/\u00FC/g, 'u')
+    .replace(/I/g, 'i').toLowerCase().replace(/[^a-z0-9\-]+/g, '-').replace(/^-+|-+$/g, '');
 };
 
 export const fromSlug = (slug: string): string => {

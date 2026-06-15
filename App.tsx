@@ -663,6 +663,8 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
         } catch (err) {
           console.error("Failed to fetch new city data:", err);
           finalPayload = null;
+        } finally {
+          setLoading(false);
         }
       }
 

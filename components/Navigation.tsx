@@ -42,18 +42,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentCity, onCityChange, onLo
         trackEvent('search_city', 'navigation', val);
         
         // Strict slugification for Turkish characters
-        const sanitizedSlug = val.toLowerCase()
-          .replace(/İ/g, 'i')
-          .replace(/I/g, 'i')
-          .replace(/ı/g, 'i')
-          .replace(/ş/g, 's')
-          .replace(/ğ/g, 'g')
-          .replace(/ç/g, 'c')
-          .replace(/ö/g, 'o')
-          .replace(/ü/g, 'u')
-          .replace(/[^a-z0-9]/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '');
+        const sanitizedSlug = toSlug(val);
 
         if (sanitizedSlug) {
           onCityChange(sanitizedSlug);
