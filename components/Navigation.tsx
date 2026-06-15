@@ -36,12 +36,29 @@ const Navigation: React.FC<NavigationProps> = ({ currentCity, onCityChange, onLo
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       const val = e.currentTarget.value.trim();
       if (val.length > 2) {
         trackEvent('search_city', 'navigation', val);
-        // Redirect to disambiguation/search page for proper geocoding validation
-        const viewParam = activeView === 'tomorrow' ? '&gun=yarin' : (activeView === 'weekend' ? '&gun=hafta-sonu' : '');
-        window.location.href = `/konum-ara?q=${encodeURIComponent(val)}${viewParam}`;
+        
+        // Strict slugification for Turkish characters
+        const sanitizedSlug = val.toLowerCase()
+          .replace(/İ/g, 'i')
+          .replace(/I/g, 'i')
+          .replace(/ı/g, 'i')
+          .replace(/ş/g, 's')
+          .replace(/ğ/g, 'g')
+          .replace(/ç/g, 'c')
+          .replace(/ö/g, 'o')
+          .replace(/ü/g, 'u')
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+
+        if (sanitizedSlug) {
+          onCityChange(sanitizedSlug);
+          e.currentTarget.blur();
+        }
       }
     }
   };

@@ -156,8 +156,8 @@ const sanitizeOpenMeteoPayload = (payload: any) => {
         city: payload.city,
         weatherData: {
             ...wd,
-            currentTemp: wd.current_weather?.temperature ?? wd.currentTemp ?? wd.current_temp ?? 0,
-            windSpeed: wd.current_weather?.windspeed ?? wd.windSpeed ?? wd.wind_speed ?? 0,
+            currentTemp: wd.current?.temperature_2m ?? wd.current_weather?.temperature ?? wd.currentTemp ?? wd.current_temp ?? 0,
+            windSpeed: wd.current?.wind_speed_10m ?? wd.current_weather?.windspeed ?? wd.windSpeed ?? wd.wind_speed ?? 0,
             windDirection: wd.current_weather?.winddirection ?? wd.windDirection ?? wd.wind_direction ?? '',
             rainVolume: wd.rainVolume ?? wd.rain_volume ?? 0,
             rainProb: wd.rainProb ?? wd.rain_prob ?? 0,
@@ -319,7 +319,12 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   // SMART HYDRATION STATE (KVKK COMPLIANT) & STRICT ROOT ROUTING
   useEffect(() => {
     const path = window.location.pathname;
-    if (path === '/' || path === '/hava-durumu' || path === '/hava-durumu/') {
+    const segments = path.split('/').filter(Boolean);
+
+    if (segments[0] === 'hava-durumu' && segments[1] && segments[1] !== 'yarin' && segments[1] !== '15-gunluk' && segments[1] !== 'hafta-sonu') {
+      const slugCity = segments[1];
+      setCurrentCity(fromSlug(slugCity));
+    } else if (path === '/' || path === '/hava-durumu' || path === '/hava-durumu/') {
       const prefs = getUserPreferences();
       const lastCity = localStorage.getItem('last_visited_city') || prefs.lastCity;
       if (prefs.consentStatus === 'accepted' && lastCity && lastCity !== 'İstanbul') {
