@@ -5,6 +5,11 @@ import { WeatherData, MarketTicker, NewsItem } from './types';
 import TopBar from './components/TopBar';
 import Navigation from './components/Navigation';
 import HeroDashboard from './components/HeroDashboard';
+import HeroSkeleton from './components/skeletons/HeroSkeleton';
+import IslandSkeleton from './components/skeletons/IslandSkeleton';
+import HourlySkeleton from './components/skeletons/HourlySkeleton';
+import LifestyleSkeleton from './components/skeletons/LifestyleSkeleton';
+import RadarSkeleton from './components/skeletons/RadarSkeleton';
 import WeatherCommentaryGrid, { AnswerSummaryBar } from './components/WeatherCommentaryGrid';
 import { generateWeatherCommentary, Timeframe } from './shared/weatherCommentary';
 import ForecastSection from './components/ForecastSection';
@@ -893,7 +898,21 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
               );
             })()}
             {loading ? (
-              <div className="flex items-center justify-center min-h-[50vh]"><div className="w-16 h-16 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div></div>
+              <div className="animate-fadeIn mt-4 w-full">
+                 <HeroSkeleton />
+                 {view.type !== '15-days' && <IslandSkeleton />}
+                 {view.type !== '15-days' && (
+                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
+                       <div className="w-full md:w-1/2">
+                          <LifestyleSkeleton />
+                       </div>
+                       <div className="w-full md:w-1/2">
+                          <RadarSkeleton />
+                       </div>
+                    </div>
+                 )}
+                 {view.type !== '15-days' && <HourlySkeleton />}
+              </div>
             ) : !displayData ? (
               <div className="p-4 text-left text-red-700 bg-red-50 border border-red-500 rounded-lg font-mono text-xs overflow-auto max-w-4xl mx-auto my-8">
                 <h3 className="font-bold text-base mb-2">DEBUG MODE: App Terminated Early (No valid displayData)</h3>
