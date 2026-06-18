@@ -652,8 +652,10 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   useEffect(() => {
     // AbortController to cancel pending requests when city/view changes
     const abortController = new AbortController();
+    let isMounted = true;
     
     const fetchData = async () => {
+      if (!isMounted) return;
       setLoading(true);
       try {
         if (payload && payload.weatherData && toSlug(payload.city) === toSlug(currentCity)) {
@@ -701,6 +703,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           }
         } else {
           const newWeatherData = await getWeatherData(currentCity);
+          if (!isMounted) return;
           if (newWeatherData) {
             setWeatherData(newWeatherData);
             
@@ -745,9 +748,9 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           }
         }
       } catch (error) {
-        console.error("Fetch failed:", error);
+        if (isMounted) console.error("Fetch failed:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
