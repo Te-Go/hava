@@ -4,8 +4,10 @@ import { WeatherData } from '../types';
 import GlassCard from './GlassCard';
 import { Icon } from './Icons';
 
+import { Tooltip } from './ui/Tooltip';
+
 const MetricCard: React.FC<{
-  title: string,
+  title: React.ReactNode,
   value: string | number,
   unit?: string,
   subtext: string,
@@ -236,14 +238,14 @@ const BentoGrid: React.FC<{ data: WeatherData }> = ({ data }) => {
         accentColor="text-blue-600 dark:text-blue-400"
       />
       <MetricCard
-        title="Nem"
+        title={<Tooltip content="Havadaki su buharı oranıdır. Yüksek nem, sıcak havaları daha bunaltıcı, soğuk havaları daha üşütücü hissettirir.">Nem</Tooltip>}
         value={data.humidity}
         unit="%"
         subtext="Çiy Noktası 25°"
         icon={<Icon.Droplets size={18} />}
       />
       <MetricCard
-        title="UV İndeksi"
+        title={<Tooltip content="Güneşin zararlı ultraviyole ışınlarının seviyesidir. 6 ve üzeri değerlerde güneş kremi kullanılması şiddetle önerilir.">UV İndeksi</Tooltip>}
         value={data.uvIndex}
         subtext={data.uvIndex > 6 ? "Yanma Süresi: ~15dk" : "Düşük Risk"}
         icon={<Icon.Sun size={18} />}
@@ -257,7 +259,17 @@ const BentoGrid: React.FC<{ data: WeatherData }> = ({ data }) => {
         icon={<Icon.Thermometer size={18} />}
       />
       <MetricCard
-        title="Atmosfer"
+        title={
+          <div className="flex gap-1 items-center">
+            <Tooltip content="Atmosfer basıncını gösterir. Hızlı düşüşler genellikle fırtına veya yağışın habercisidir.">
+              Basınç
+            </Tooltip>
+            <span>/</span>
+            <Tooltip content="Havadaki kirletici miktarını ölçer. 50'nin altı temiz, 100'ün üstü hassas gruplar için risklidir.">
+              HKİ
+            </Tooltip>
+          </div>
+        }
         value={`${data.pressure}`}
         unit="hPa"
         subtext={getAqiText()}
