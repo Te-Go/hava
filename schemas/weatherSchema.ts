@@ -50,5 +50,16 @@ export const openMeteoSchema = z.object({
 });
 
 export const sanitizeOpenMeteoPayload = (data: unknown) => {
-  return openMeteoSchema.parse(data);
+  try {
+    if (!data || typeof data !== 'object') throw new Error("Payload is null or invalid");
+    return openMeteoSchema.parse(data);
+  } catch (e) {
+    console.error("Root Failsafe Activated:", e);
+    return {
+      latitude: 0, longitude: 0,
+      current: { time: '', is_day: 1, temperature_2m: 0, weather_code: 0, wind_speed_10m: 0, relative_humidity_2m: 50, apparent_temperature: 0, surface_pressure: 1013 },
+      hourly: { time: [], temperature_2m: [], precipitation_probability: [], precipitation: [], weather_code: [], is_day: [], wind_speed_10m: [], wind_direction_10m: [], apparent_temperature: [], relative_humidity_2m: [], uv_index: [], visibility: [], surface_pressure: [] },
+      daily: { time: [], weather_code: [], temperature_2m_max: [], temperature_2m_min: [], precipitation_sum: [], wind_speed_10m_max: [], uv_index_max: [], precipitation_probability_max: [], apparent_temperature_max: [], sunrise: [], sunset: [] }
+    };
+  }
 };
