@@ -114,11 +114,11 @@ class SinanWeatherBridge {
             return;
         }
 
-        $raw_city = get_query_var('weather_city') ? get_query_var('weather_city') : (isset($_GET['city']) ? $_GET['city'] : 'istanbul');
+        $raw_city = get_query_var('weather_city') ? get_query_var('weather_city') : 'istanbul';
         $tr_map = array('İ'=>'i', 'I'=>'i', 'ı'=>'i', 'ş'=>'s', 'ğ'=>'g', 'ç'=>'c', 'ö'=>'o', 'ü'=>'u', 'Ş'=>'s', 'Ğ'=>'g', 'Ç'=>'c', 'Ö'=>'o', 'Ü'=>'u');
-        $slug = sanitize_title(strtolower(strtr($raw_city, $tr_map)));
+        $city_slug = sanitize_title(strtolower(strtr($raw_city, $tr_map)));
         $cache_dir = wp_upload_dir()['basedir'] . '/sinan-weather-cache';
-        $live_file = "{$cache_dir}/{$slug}.json";
+        $live_file = "{$cache_dir}/{$city_slug}.json";
         
         $weather_payload = null;
         $is_valid_cache = false;
@@ -128,8 +128,12 @@ class SinanWeatherBridge {
             $raw_cache = file_get_contents( $live_file );
             $parsed = json_decode($raw_cache, true);
             if (is_array($parsed) && isset($parsed['current_weather']) && isset($parsed['hourly']) && isset($parsed['daily'])) {
-                $weather_payload = $raw_cache;
-                $is_valid_cache = true;
+                if (!isset($parsed['daily']['uv_index_max'])) {
+                    $is_valid_cache = false;
+                } else {
+                    $weather_payload = $raw_cache;
+                    $is_valid_cache = true;
+                }
             }
         }
 
@@ -137,10 +141,10 @@ class SinanWeatherBridge {
         if ( ! $is_valid_cache ) {
             // Fallback coordinate mapping for the root/default
             $lat = 41.0082; $lon = 28.9784; 
-            if ($slug === 'antalya') { $lat = 36.8969; $lon = 30.7133; }
+            if ($city_slug === 'antalya') { $lat = 36.8969; $lon = 30.7133; }
             
             // Add daily forecast to ensure the React app has full data
-            $api_url  = "https://api.open-meteo.com/v1/forecast?latitude={$lat}&longitude={$lon}&current_weather=true&current=apparent_temperature,relative_humidity_2m,surface_pressure&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max&timezone=auto&forecast_days=16";
+            $api_url = "https://api.open-meteo.com/v1/forecast?latitude={$lat}&longitude={$lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,cloud_cover,visibility&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,is_day,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,apparent_temperature_max,uv_index_max&forecast_days=15&forecast_hours=360&timezone=auto";
             
             $response = wp_remote_get( $api_url, array( 'timeout' => 10, 'sslverify' => false ) );
 
@@ -166,7 +170,7 @@ class SinanWeatherBridge {
 
         // 4. Construct the Payloads
         $payload_array = array(
-            'city' => $slug,
+            'city' => $city_slug,
             'locationId' => 0,
             'weatherData' => json_decode( $weather_payload, true ),
             'modules' => array( 'showTraffic' => true, 'showMarine' => true, 'showSki' => true )
