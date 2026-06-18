@@ -652,78 +652,103 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   useEffect(() => {
     // AbortController to cancel pending requests when city/view changes
     const abortController = new AbortController();
-    let isMounted = true;
-
+    
     const fetchData = async () => {
-      console.log('DEBUG: Payload City:', payload?.city, 'vs App City:', currentCity);
-      let finalPayload = payload;
+      setLoading(true);
+      try {
+        if (payload && payload.weatherData && toSlug(payload.city) === toSlug(currentCity)) {
+          const sanitized = sanitizeOpenMeteoPayload(payload);
+          const safeWeatherData = sanitized.weatherData;
+          setWeatherData(safeWeatherData);
+          
+          if (isMetroCity(currentCity)) {
+             fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));
+          } else setTrafficData(null);
 
-      // If the city changed via search bar, fetch new data since payload is stale
-      if (!payload || toSlug(payload.city) !== toSlug(currentCity)) {
-        if (loading && weatherData) return; // STRICT LOOP GUARD
-        setLoading(true);
-        try {
+          if (isCoastalCity(currentCity)) {
+             fetchMarineData(currentCity).then(setMarineData).catch(() => setMarineData(null));
+          } else setMarineData(null);
+
+          if (hasSkiResort(currentCity)) {
+             setSkiData(calculateSkiConditions(currentCity, safeWeatherData.currentTemp, safeWeatherData.rainVolume || 0, safeWeatherData.windSpeed, safeWeatherData.cloudCover || 0));
+          } else setSkiData(null);
+
+          if (isAgricultureRegion(currentCity)) {
+             fetchAgricultureData(currentCity).then(setAgricultureData).catch(() => setAgricultureData(null));
+          } else setAgricultureData(null);
+
+          if (isAltitudeRegion(currentCity)) {
+             const minTemp = safeWeatherData.daily?.[0]?.low || 0;
+             setAltitudeData(calculateAltitudeData(getProvinceElevation(currentCity), safeWeatherData.currentTemp, safeWeatherData.feelsLike, [minTemp], safeWeatherData.windSpeed, safeWeatherData.rainVolume || 0));
+          } else setAltitudeData(null);
+
+          if (isFireRiskRegion(currentCity)) {
+             setFireRiskData(calculateFireRisk(safeWeatherData.humidity, safeWeatherData.windSpeed, safeWeatherData.currentTemp, safeWeatherData.rainVolume || 0));
+          } else setFireRiskData(null);
+
+          if (isTourismRegion(currentCity)) {
+             setTourismData(calculateTourismComfort(safeWeatherData.currentTemp, safeWeatherData.humidity, safeWeatherData.uvIndex, currentCity));
+          } else setTourismData(null);
+
+          // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
+          if (safeWeatherData && !isManualTheme && !loading && toSlug(safeWeatherData.city) === toSlug(currentCity)) {
+            const iconStatus = safeWeatherData.icon || '';
+            if (iconStatus === 'moon' || iconStatus.includes('night') || iconStatus.includes('storm')) {
+              setIsDarkMode(true);
+            } else {
+              setIsDarkMode(false);
+            }
+          }
+        } else {
           const newWeatherData = await getWeatherData(currentCity);
-          finalPayload = { city: currentCity, weatherData: newWeatherData };
-        } catch (err) {
-          console.error("Failed to fetch new city data:", err);
-          finalPayload = null;
-        } finally {
-          setLoading(false);
-        }
-      }
+          if (newWeatherData) {
+            setWeatherData(newWeatherData);
+            
+            if (isMetroCity(currentCity)) {
+               fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));
+            } else setTrafficData(null);
 
-      if (finalPayload && finalPayload.weatherData) {
-        // Use the global sanitizer to get transposed daily and hourly data
-        const sanitized = sanitizeOpenMeteoPayload(finalPayload);
-        const safeWeatherData = sanitized.weatherData;
-        
-        setWeatherData(safeWeatherData);
+            if (isCoastalCity(currentCity)) {
+               fetchMarineData(currentCity).then(setMarineData).catch(() => setMarineData(null));
+            } else setMarineData(null);
 
-        // HYDRATE ISLAND WIDGETS
-        if (isMetroCity(currentCity)) {
-           fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));
-        } else setTrafficData(null);
+            if (hasSkiResort(currentCity)) {
+               setSkiData(calculateSkiConditions(currentCity, newWeatherData.currentTemp, newWeatherData.rainVolume || 0, newWeatherData.windSpeed, newWeatherData.cloudCover || 0));
+            } else setSkiData(null);
 
-        if (isCoastalCity(currentCity)) {
-           fetchMarineData(currentCity).then(setMarineData).catch(() => setMarineData(null));
-        } else setMarineData(null);
+            if (isAgricultureRegion(currentCity)) {
+               fetchAgricultureData(currentCity).then(setAgricultureData).catch(() => setAgricultureData(null));
+            } else setAgricultureData(null);
 
-        if (hasSkiResort(currentCity)) {
-           setSkiData(calculateSkiConditions(currentCity, safeWeatherData.currentTemp, safeWeatherData.rainVolume || 0, safeWeatherData.windSpeed, safeWeatherData.cloudCover || 0));
-        } else setSkiData(null);
+            if (isAltitudeRegion(currentCity)) {
+               const minTemp = newWeatherData.daily?.[0]?.low || 0;
+               setAltitudeData(calculateAltitudeData(getProvinceElevation(currentCity), newWeatherData.currentTemp, newWeatherData.feelsLike, [minTemp], newWeatherData.windSpeed, newWeatherData.rainVolume || 0));
+            } else setAltitudeData(null);
 
-        if (isAgricultureRegion(currentCity)) {
-           fetchAgricultureData(currentCity).then(setAgricultureData).catch(() => setAgricultureData(null));
-        } else setAgricultureData(null);
+            if (isFireRiskRegion(currentCity)) {
+               setFireRiskData(calculateFireRisk(newWeatherData.humidity, newWeatherData.windSpeed, newWeatherData.currentTemp, newWeatherData.rainVolume || 0));
+            } else setFireRiskData(null);
 
-        if (isAltitudeRegion(currentCity)) {
-           const minTemp = safeWeatherData.daily?.[0]?.low || 0;
-           setAltitudeData(calculateAltitudeData(getProvinceElevation(currentCity), safeWeatherData.currentTemp, safeWeatherData.feelsLike, [minTemp], safeWeatherData.windSpeed, safeWeatherData.rainVolume || 0));
-        } else setAltitudeData(null);
+            if (isTourismRegion(currentCity)) {
+               setTourismData(calculateTourismComfort(newWeatherData.currentTemp, newWeatherData.humidity, newWeatherData.uvIndex, currentCity));
+            } else setTourismData(null);
 
-        if (isFireRiskRegion(currentCity)) {
-           setFireRiskData(calculateFireRisk(safeWeatherData.humidity, safeWeatherData.windSpeed, safeWeatherData.currentTemp, safeWeatherData.rainVolume || 0));
-        } else setFireRiskData(null);
-
-        if (isTourismRegion(currentCity)) {
-           setTourismData(calculateTourismComfort(safeWeatherData.currentTemp, safeWeatherData.humidity, safeWeatherData.uvIndex, currentCity));
-        } else setTourismData(null);
-
-        // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
-        if (safeWeatherData && !isManualTheme && !loading && toSlug(safeWeatherData.city) === toSlug(currentCity)) {
-          const iconStatus = safeWeatherData.icon || '';
-          if (iconStatus === 'moon' || iconStatus.includes('night') || iconStatus.includes('storm')) {
-            setIsDarkMode(true);
-          } else {
-            setIsDarkMode(false);
+            // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
+            if (newWeatherData && !isManualTheme && !loading && toSlug(newWeatherData.city) === toSlug(currentCity)) {
+              const iconStatus = newWeatherData.icon || '';
+              if (iconStatus === 'moon' || iconStatus.includes('night') || iconStatus.includes('storm')) {
+                setIsDarkMode(true);
+              } else {
+                setIsDarkMode(false);
+              }
+            }
           }
         }
-
+      } catch (error) {
+        console.error("Fetch failed:", error);
+      } finally {
         setLoading(false);
-        return;
       }
-      setLoading(false);
     };
 
     if (view.type === 'home' || view.type === 'tomorrow' || view.type === '15-days') {

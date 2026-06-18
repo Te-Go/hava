@@ -116,7 +116,9 @@ class SinanWeatherBridge {
             return; 
         }
 
-        $city_slug = get_query_var('weather_city') ? sanitize_title(get_query_var('weather_city')) : 'istanbul';
+        $raw_city = get_query_var('weather_city') ? get_query_var('weather_city') : (isset($_GET['city']) ? $_GET['city'] : 'istanbul');
+        $tr_map = array('İ'=>'i', 'I'=>'i', 'ı'=>'i', 'ş'=>'s', 'ğ'=>'g', 'ç'=>'c', 'ö'=>'o', 'ü'=>'u', 'Ş'=>'s', 'Ğ'=>'g', 'Ç'=>'c', 'Ö'=>'o', 'Ü'=>'u');
+        $city_slug = sanitize_title(strtolower(strtr($raw_city, $tr_map)));
         $cache_dir = wp_upload_dir()['basedir'] . '/sinan-weather-cache';
         $live_file = "{$cache_dir}/{$city_slug}.json";
         $weather_payload = '{}';

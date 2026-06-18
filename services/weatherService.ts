@@ -156,7 +156,7 @@ export const toSlug = (text: string): string => {
     .replace(/\u00C7/g, 'c').replace(/\u00E7/g, 'c')
     .replace(/\u00D6/g, 'o').replace(/\u00F6/g, 'o')
     .replace(/\u00DC/g, 'u').replace(/\u00FC/g, 'u')
-    .replace(/I/g, 'i').toLowerCase().replace(/[^a-z0-9\-]+/g, '-').replace(/^-+|-+$/g, '');
+    .toLowerCase().replace(/[^a-z0-9\-]+/g, '-').replace(/^-+|-+$/g, '');
 };
 
 export const fromSlug = (slug: string): string => {
