@@ -1,5 +1,6 @@
 
 import { WeatherData, MarketTicker, NewsItem, TedderConfig, LifestyleIndex, HourlyForecast, DailyForecast, UserPreferences, LegalContent, HistoricalData, HistoricalDayData, HistoricalAverage } from '../types';
+import { sanitizeOpenMeteoPayload } from '../schemas/weatherSchema';
 
 // Export getConfig directly for runtime evaluation
 // This allows WordPress to inject TedderConfig after module load
@@ -964,7 +965,8 @@ const getWeatherIcon = (code: number, isDay: boolean, precipProb: number = 0): s
   return 'cloudy'; // Safe fallback
 }
 
-const mapOpenMeteoToModel = async (city: string, data: any): Promise<WeatherData> => {
+const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<WeatherData> => {
+  const data = sanitizeOpenMeteoPayload(rawData);
   const current = data.current;
   const hourly = data.hourly;
   const daily = data.daily;
