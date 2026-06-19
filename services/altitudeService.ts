@@ -136,20 +136,20 @@ export function isAltitudeRegion(cityName: string): boolean {
  */
 export function getProvinceElevation(cityName: string): number {
     const elevations: Record<string, number> = {
-        'Van': 1725,
-        'Kars': 1750,
-        'Ağrı': 1650,
-        'Iğdır': 858,
-        'Ardahan': 1829,
-        'Erzurum': 1900,
-        'Hakkari': 1720,
-        'Muş': 1350,
-        'Bitlis': 1545,
-        'Bingöl': 1150,
-        'Tunceli': 930,
-        'Gümüşhane': 1210,
-        'Bayburt': 1550,
+        'van': 1725,
+        'kars': 1750,
+        'agri': 1650,
+        'igdir': 858,
+        'ardahan': 1829,
+        'erzurum': 1900,
+        'hakkari': 1720,
+        'mus': 1350,
+        'bitlis': 1545,
+        'bingol': 1150,
+        'tunceli': 930,
+        'gumushane': 1210,
+        'bayburt': 1550,
     };
 
-    return elevations[cityName] ?? 1000;
+    return elevations[toSlug(cityName)] ?? 1000;
 }

@@ -249,7 +249,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   const [tourismData, setTourismData] = useState<TourismData | null>(null);
 
   // Doorway Modules State
-  const [modules, setModules] = useState<any>(payload?.modules || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
+  const [modules, setModules] = useState<any>((typeof window !== 'undefined' && (window as any).SinanWeatherPayload?.modules) || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
 
   // DEBUG: Log mount state
   useEffect(() => {
@@ -599,41 +599,43 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       if (!isMounted) return;
       setLoading(true);
       try {
-        if (payload && payload.weatherData && toSlug(payload.city) === toSlug(currentCity)) {
+        const citySlug = toSlug(currentCity);
+        if (payload && payload.weatherData && toSlug(payload.city) === citySlug) {
           const safeWeatherData = await mapOpenMeteoToModel(currentCity, payload.weatherData);
           setWeatherData(safeWeatherData);
           
-          if (hasTrafficMonitoring(currentCity)) {
-             fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));
+          if (hasTrafficMonitoring(citySlug)) {
+             fetchTrafficData(citySlug, TOMTOM_API_KEY).then(setTrafficData).catch(() => setTrafficData(null));
           } else setTrafficData(null);
 
-          if (isCoastalCity(currentCity)) {
-             fetchMarineData(currentCity).then(setMarineData).catch(() => setMarineData(null));
+          if (isCoastalCity(citySlug)) {
+             fetchMarineData(citySlug).then(setMarineData).catch(() => setMarineData(null));
           } else setMarineData(null);
 
-          if (hasSkiResort(currentCity)) {
-             fetchWeatherUnlockedSki(currentCity).then(setSkiData).catch(() => setSkiData(null));
+          if (hasSkiResort(citySlug)) {
+             fetchWeatherUnlockedSki(citySlug).then(setSkiData).catch(() => setSkiData(null));
           } else setSkiData(null);
 
-          if (isAgricultureRegion(currentCity)) {
-             fetchAgricultureData(currentCity).then(setAgricultureData).catch(() => setAgricultureData(null));
+          if (isAgricultureRegion(citySlug)) {
+             const isRaining = (safeWeatherData.rainVolume || 0) > 0 || (safeWeatherData.hourly?.[0]?.precipProb || 0) > 30;
+             fetchAgricultureData(safeWeatherData.coord?.lat || 39, safeWeatherData.coord?.lon || 35, isRaining).then(setAgricultureData).catch(() => setAgricultureData(null));
           } else setAgricultureData(null);
 
-          if (isAltitudeRegion(currentCity)) {
+          if (isAltitudeRegion(citySlug)) {
              const minTemp = safeWeatherData.daily?.[0]?.low || 0;
-             setAltitudeData(calculateAltitudeData(getProvinceElevation(currentCity), safeWeatherData.currentTemp, safeWeatherData.feelsLike, [minTemp], safeWeatherData.windSpeed, safeWeatherData.rainVolume || 0));
+             setAltitudeData(calculateAltitudeData(getProvinceElevation(citySlug), safeWeatherData.currentTemp, safeWeatherData.feelsLike, [minTemp], safeWeatherData.windSpeed, safeWeatherData.rainVolume || 0));
           } else setAltitudeData(null);
 
-          if (isFireRiskRegion(currentCity)) {
+          if (isFireRiskRegion(citySlug)) {
              setFireRiskData(calculateFireRisk(safeWeatherData.humidity, safeWeatherData.windSpeed, safeWeatherData.currentTemp, safeWeatherData.rainVolume || 0));
           } else setFireRiskData(null);
 
-          if (isTourismRegion(currentCity)) {
-             setTourismData(calculateTourismComfort(safeWeatherData.currentTemp, safeWeatherData.humidity, safeWeatherData.uvIndex, currentCity));
+          if (isTourismRegion(citySlug)) {
+             setTourismData(calculateTourismComfort(safeWeatherData.currentTemp, safeWeatherData.humidity, safeWeatherData.uvIndex, citySlug));
           } else setTourismData(null);
 
           // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
-          if (safeWeatherData && !isManualTheme && !loading && toSlug(safeWeatherData.city) === toSlug(currentCity)) {
+          if (safeWeatherData && !isManualTheme && !loading && toSlug(safeWeatherData.city) === citySlug) {
             const iconStatus = safeWeatherData.icon || '';
             if (iconStatus === 'moon' || iconStatus.includes('night') || iconStatus.includes('storm')) {
               setIsDarkMode(true);
@@ -644,41 +646,42 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
         } else {
           const newWeatherData = await getWeatherData(currentCity);
           if (!isMounted) return;
-            if (newWeatherData) {
+          if (newWeatherData) {
             setWeatherData(newWeatherData);
-            setModules(payload?.modules || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
+            setModules((typeof window !== 'undefined' && (window as any).SinanWeatherPayload?.modules) || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
             
-            if (hasTrafficMonitoring(currentCity)) {
-               fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));
+            if (hasTrafficMonitoring(citySlug)) {
+               fetchTrafficData(citySlug, TOMTOM_API_KEY).then(setTrafficData).catch(() => setTrafficData(null));
             } else setTrafficData(null);
 
-            if (isCoastalCity(currentCity)) {
-               fetchMarineData(currentCity).then(setMarineData).catch(() => setMarineData(null));
+            if (isCoastalCity(citySlug)) {
+               fetchMarineData(citySlug).then(setMarineData).catch(() => setMarineData(null));
             } else setMarineData(null);
 
-            if (hasSkiResort(currentCity)) {
-               fetchWeatherUnlockedSki(currentCity).then(setSkiData).catch(() => setSkiData(null));
+            if (hasSkiResort(citySlug)) {
+               fetchWeatherUnlockedSki(citySlug).then(setSkiData).catch(() => setSkiData(null));
             } else setSkiData(null);
 
-            if (isAgricultureRegion(currentCity)) {
-               fetchAgricultureData(currentCity).then(setAgricultureData).catch(() => setAgricultureData(null));
+            if (isAgricultureRegion(citySlug)) {
+               const isRaining = (newWeatherData.rainVolume || 0) > 0 || (newWeatherData.hourly?.[0]?.precipProb || 0) > 30;
+               fetchAgricultureData(newWeatherData.coord?.lat || 39, newWeatherData.coord?.lon || 35, isRaining).then(setAgricultureData).catch(() => setAgricultureData(null));
             } else setAgricultureData(null);
 
-            if (isAltitudeRegion(currentCity)) {
+            if (isAltitudeRegion(citySlug)) {
                const minTemp = newWeatherData.daily?.[0]?.low || 0;
-               setAltitudeData(calculateAltitudeData(getProvinceElevation(currentCity), newWeatherData.currentTemp, newWeatherData.feelsLike, [minTemp], newWeatherData.windSpeed, newWeatherData.rainVolume || 0));
+               setAltitudeData(calculateAltitudeData(getProvinceElevation(citySlug), newWeatherData.currentTemp, newWeatherData.feelsLike, [minTemp], newWeatherData.windSpeed, newWeatherData.rainVolume || 0));
             } else setAltitudeData(null);
 
-            if (isFireRiskRegion(currentCity)) {
+            if (isFireRiskRegion(citySlug)) {
                setFireRiskData(calculateFireRisk(newWeatherData.humidity, newWeatherData.windSpeed, newWeatherData.currentTemp, newWeatherData.rainVolume || 0));
             } else setFireRiskData(null);
 
-            if (isTourismRegion(currentCity)) {
-               setTourismData(calculateTourismComfort(newWeatherData.currentTemp, newWeatherData.humidity, newWeatherData.uvIndex, currentCity));
+            if (isTourismRegion(citySlug)) {
+               setTourismData(calculateTourismComfort(newWeatherData.currentTemp, newWeatherData.humidity, newWeatherData.uvIndex, citySlug));
             } else setTourismData(null);
 
             // Auto-Theme Logic (Only if user hasn't manually overridden via settings)
-            if (newWeatherData && !isManualTheme && !loading && toSlug(newWeatherData.city) === toSlug(currentCity)) {
+            if (newWeatherData && !isManualTheme && !loading && toSlug(newWeatherData.city) === citySlug) {
               const iconStatus = newWeatherData.icon || '';
               if (iconStatus === 'moon' || iconStatus.includes('night') || iconStatus.includes('storm')) {
                 setIsDarkMode(true);
@@ -867,22 +870,20 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
               );
             })()}
             {loading ? (
-              <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <div className="animate-fadeIn w-full">
-                   <HeroSkeleton />
-                   {view.type !== '15-days' && <IslandSkeleton />}
-                   {view.type !== '15-days' && (
-                      <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
-                         <div className="w-full md:w-1/2">
-                            <LifestyleSkeleton />
-                         </div>
-                         <div className="w-full md:w-1/2">
-                            <RadarSkeleton />
-                         </div>
-                      </div>
-                   )}
-                   {view.type !== '15-days' && <HourlySkeleton />}
-                </div>
+              <div className="animate-fadeIn w-full py-6">
+                 <HeroSkeleton />
+                 {view.type !== '15-days' && <IslandSkeleton />}
+                 {view.type !== '15-days' && (
+                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
+                       <div className="w-full md:w-1/2">
+                          <LifestyleSkeleton />
+                       </div>
+                       <div className="w-full md:w-1/2">
+                          <RadarSkeleton />
+                       </div>
+                    </div>
+                 )}
+                 {view.type !== '15-days' && <HourlySkeleton />}
               </div>
             ) : !displayData ? (
               <div className="p-4 text-left text-red-700 bg-red-50 border border-red-500 rounded-lg font-mono text-xs overflow-auto max-w-4xl mx-auto my-8">
@@ -931,7 +932,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                         altitude={altitudeData}
                         fireRisk={fireRiskData}
                         tourism={tourismData}
-                        cityDisplay={fromSlug(currentCity)}
+                        cityDisplay={currentCity}
                         trafficCityDisplay={trafficCityDisplay}
                         marineCityDisplay={marineCityDisplay}
                         fallbackNarrative={generateWeatherCommentary(displayData, view.type === 'tomorrow' ? 'tomorrow' : 'today').answerBlock}
