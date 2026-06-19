@@ -46,6 +46,7 @@ import { fetchMarineData, isCoastalCity, type MarineData } from './services/mari
 import { fetchTrafficData, hasTrafficMonitoring, type TomTomTrafficData } from './services/tomtomTrafficService';
 import { hasSkiResort, resolveSkiCityKey, type SkiData } from './services/skiService';
 import { fetchWeatherUnlockedSki } from './services/weatherUnlockedSkiService';
+import { mapOpenMeteoToModel } from './services/weatherService';
 import { findNearestHub } from './services/locationUtils'; // Hub & Spoke Logic
 
 // New Island Services
@@ -119,76 +120,10 @@ const RESERVED_PATHS = [
   'sehirler' // Cities index page
 ];
 
-// 1. GLOBAL INTERCEPTOR (Place outside the App component)
-const sanitizeOpenMeteoPayload = (payload: any) => {
-    if (!payload || !payload.weatherData) return payload;
-
-    // Transpose Daily
-    const rawDaily = payload.weatherData.daily || {};
-    const transformedDaily = Array.isArray(rawDaily) ? rawDaily : (rawDaily.time || []).map((t: string, i: number) => ({
-        day: new Date(t).toLocaleDateString('tr-TR', { weekday: 'short' }),
-        high: rawDaily.temperature_2m_max?.[i] || 0,
-        low: rawDaily.temperature_2m_min?.[i] || 0,
-        rainProb: rawDaily.precipitation_probability_max?.[i] || 0,
-        wind: rawDaily.wind_speed_10m_max?.[i] ? `${rawDaily.wind_speed_10m_max[i]} km/s` : '0 km/sa',
-        condition: 'Açık',
-        icon: rawDaily.weathercode?.[i]?.toString() || '0'
-    }));
-
-    // Transpose Hourly
-    const wd = payload.weatherData;
-    const rawHourly = wd.hourly || {};
-    
-    // Format timestamp helper
-    const formatTime = (t: string) => {
-        try {
-            return new Date(t).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-        } catch (e) {
-            return t; // fallback
-        }
-    };
-
-    const transformedHourly = Array.isArray(rawHourly) ? rawHourly : (rawHourly.time || []).map((t: string, i: number) => ({
-        time: formatTime(t),
-        temp: rawHourly.temperature_2m?.[i] || 0,
-        feelsLike: rawHourly.temperature_2m?.[i] || 0, 
-        precipProb: rawHourly.precipitation_probability?.[i] || 0,
-        windSpeed: rawHourly.wind_speed_10m?.[i] || 0,
-        humidity: rawHourly.relative_humidity_2m?.[i] || 0
-    }));
-
-    return {
-        ...payload,
-        city: payload.city,
-        weatherData: {
-            ...wd,
-            currentTemp: wd.current?.temperature_2m ?? wd.current_weather?.temperature ?? wd.currentTemp ?? wd.current_temp ?? 0,
-            high: wd.daily?.temperature_2m_max?.[0] ?? wd.high ?? 0,
-            low: wd.daily?.temperature_2m_min?.[0] ?? wd.low ?? 0,
-            windSpeed: wd.current?.wind_speed_10m ?? wd.current_weather?.windspeed ?? wd.windSpeed ?? wd.wind_speed ?? 0,
-            windDirection: wd.current_weather?.winddirection ?? wd.windDirection ?? wd.wind_direction ?? '',
-            rainVolume: wd.rainVolume ?? wd.rain_volume ?? 0,
-            rainProb: wd.rainProb ?? wd.rain_prob ?? 0,
-            feelsLike: wd.current?.apparent_temperature ?? wd.feelsLike ?? wd.feels_like ?? 0,
-            humidity: wd.current?.relative_humidity_2m ?? wd.humidity ?? 0,
-            pressure: wd.current?.surface_pressure ?? wd.pressure ?? 0,
-            cloudCover: wd.cloudCover ?? wd.cloud_cover ?? 0,
-            uvIndex: wd.daily?.uv_index_max?.[0] ?? wd.uvIndex ?? wd.uv_index ?? 0,
-            sunrise: wd.daily?.sunrise?.[0] ?? wd.sunrise ?? '',
-            sunset: wd.daily?.sunset?.[0] ?? wd.sunset ?? '',
-            daily: transformedDaily,
-            hourly: transformedHourly,
-            city: payload.city,
-            icon: wd.current_weather?.weathercode?.toString() || wd.icon || ''
-        }
-    };
-};
-
 // 2. SAFE INITIALIZATION (Place before App component)
-const safeInitialPayload = typeof window !== 'undefined' && (window as any).SinanWeatherPayload 
-    ? sanitizeOpenMeteoPayload((window as any).SinanWeatherPayload) 
-    : null;
-const INITIAL_WEATHER_DATA = safeInitialPayload?.weatherData || null;
+// Since mapOpenMeteoToModel is async (it fetches AQI), we must initialize with null 
+// and let the useEffect fetchData block correctly await and hydrate the payload.
+const INITIAL_WEATHER_DATA = null;
 
 if (typeof window !== 'undefined') {
     console.log("Current Payload:", (window as any).SinanWeatherPayload);
@@ -665,11 +600,10 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       setLoading(true);
       try {
         if (payload && payload.weatherData && toSlug(payload.city) === toSlug(currentCity)) {
-          const sanitized = sanitizeOpenMeteoPayload(payload);
-          const safeWeatherData = sanitized.weatherData;
+          const safeWeatherData = await mapOpenMeteoToModel(currentCity, payload.weatherData);
           setWeatherData(safeWeatherData);
           
-          if (isMetroCity(currentCity)) {
+          if (hasTrafficMonitoring(currentCity)) {
              fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));
           } else setTrafficData(null);
 
@@ -714,7 +648,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
             setWeatherData(newWeatherData);
             setModules(payload?.modules || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
             
-            if (isMetroCity(currentCity)) {
+            if (hasTrafficMonitoring(currentCity)) {
                fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));
             } else setTrafficData(null);
 
