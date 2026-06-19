@@ -185,7 +185,7 @@ async function fetchTomTomFlowData(
         // TomTom Flow Segment Data endpoint
         // Style: absolute | relative | relative-delay
         // Zoom: 10 for city-level
-        const url = `${TOMTOM_API_BASE}/absolute/10/json?key=${apiKey}&point=${lat},${lon}&unit=KMPH`;
+        const url = `/wp-json/sinan/v1/traffic?lat=${lat}&lon=${lon}`;
 
         const response = await fetch(url);
 

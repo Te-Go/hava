@@ -249,7 +249,10 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   const [tourismData, setTourismData] = useState<TourismData | null>(null);
 
   // Doorway Modules State
-  const [modules, setModules] = useState<any>((typeof window !== 'undefined' && (window as any).SinanWeatherPayload?.modules) || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
+  const [modules, setModules] = useState<any>(() => {
+    const serverModules = (typeof window !== 'undefined' && (window as any).SinanWeatherPayload?.modules) || payload?.modules;
+    return { showTraffic: true, showMarine: true, showSki: true, showAgri: true, ...(serverModules || {}) };
+  });
 
   // DEBUG: Log mount state
   useEffect(() => {
@@ -649,7 +652,8 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           if (!isMounted) return;
           if (newWeatherData) {
             setWeatherData(newWeatherData);
-            setModules((typeof window !== 'undefined' && (window as any).SinanWeatherPayload?.modules) || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
+            const serverModules = (typeof window !== 'undefined' && (window as any).SinanWeatherPayload?.modules) || payload?.modules;
+            setModules({ showTraffic: true, showMarine: true, showSki: true, showAgri: true, ...(serverModules || {}) });
             
             if (hasTrafficMonitoring(citySlug)) {
                fetchTrafficData(citySlug).then(setTrafficData).catch(() => setTrafficData(null));
@@ -871,7 +875,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
               );
             })()}
             {loading ? (
-              <div className="w-full max-w-7xl mx-auto px-4 py-4 md:py-8 flex flex-col">
+              <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col justify-start">
                 <div className="animate-fadeIn w-full">
                    <HeroSkeleton />
                    {view.type !== '15-days' && <IslandSkeleton />}
