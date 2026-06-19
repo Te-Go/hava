@@ -35,7 +35,7 @@ function generatepress_child_enqueue_styles() {
                 'sinan-weather-react-styles', 
                 $css_uri, 
                 array(), 
-                filemtime($css_file)
+                time()
             );
         }
 
@@ -44,7 +44,7 @@ function generatepress_child_enqueue_styles() {
                 'sinan-weather-react-app',
                 $js_uri,
                 array(), // Dependency on wp-element (React) if needed, or just standard
-                filemtime($js_file),
+                time(),
                 true // Load in footer
             );
         }
