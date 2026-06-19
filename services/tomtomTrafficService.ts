@@ -221,7 +221,7 @@ import { fetchWithCache } from './cacheService';
  */
 export async function fetchTrafficData(
     city: string,
-    apiKey: string
+    apiKey?: string
 ): Promise<TomTomTrafficData | null> {
     const cityKey = city.toLowerCase()
         .replace(/ı/g, 'i')

@@ -600,12 +600,13 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       setLoading(true);
       try {
         const citySlug = toSlug(currentCity);
-        if (payload && payload.weatherData && toSlug(payload.city) === citySlug) {
-          const safeWeatherData = await mapOpenMeteoToModel(currentCity, payload.weatherData);
+        const globalPayload = (window as any).SinanWeatherPayload;
+        if (globalPayload && globalPayload.weatherData && toSlug(globalPayload.city) === citySlug) {
+          const safeWeatherData = await mapOpenMeteoToModel(citySlug, globalPayload.weatherData);
           setWeatherData(safeWeatherData);
           
           if (hasTrafficMonitoring(citySlug)) {
-             fetchTrafficData(citySlug, TOMTOM_API_KEY).then(setTrafficData).catch(() => setTrafficData(null));
+             fetchTrafficData(citySlug).then(setTrafficData).catch(() => setTrafficData(null));
           } else setTrafficData(null);
 
           if (isCoastalCity(citySlug)) {
@@ -651,7 +652,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
             setModules((typeof window !== 'undefined' && (window as any).SinanWeatherPayload?.modules) || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
             
             if (hasTrafficMonitoring(citySlug)) {
-               fetchTrafficData(citySlug, TOMTOM_API_KEY).then(setTrafficData).catch(() => setTrafficData(null));
+               fetchTrafficData(citySlug).then(setTrafficData).catch(() => setTrafficData(null));
             } else setTrafficData(null);
 
             if (isCoastalCity(citySlug)) {
@@ -870,20 +871,22 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
               );
             })()}
             {loading ? (
-              <div className="animate-fadeIn w-full py-6">
-                 <HeroSkeleton />
-                 {view.type !== '15-days' && <IslandSkeleton />}
-                 {view.type !== '15-days' && (
-                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
-                       <div className="w-full md:w-1/2">
-                          <LifestyleSkeleton />
-                       </div>
-                       <div className="w-full md:w-1/2">
-                          <RadarSkeleton />
-                       </div>
-                    </div>
-                 )}
-                 {view.type !== '15-days' && <HourlySkeleton />}
+              <div className="w-full max-w-7xl mx-auto px-4 py-4 md:py-8 flex flex-col">
+                <div className="animate-fadeIn w-full">
+                   <HeroSkeleton />
+                   {view.type !== '15-days' && <IslandSkeleton />}
+                   {view.type !== '15-days' && (
+                      <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
+                         <div className="w-full md:w-1/2">
+                            <LifestyleSkeleton />
+                         </div>
+                         <div className="w-full md:w-1/2">
+                            <RadarSkeleton />
+                         </div>
+                      </div>
+                   )}
+                   {view.type !== '15-days' && <HourlySkeleton />}
+                </div>
               </div>
             ) : !displayData ? (
               <div className="p-4 text-left text-red-700 bg-red-50 border border-red-500 rounded-lg font-mono text-xs overflow-auto max-w-4xl mx-auto my-8">

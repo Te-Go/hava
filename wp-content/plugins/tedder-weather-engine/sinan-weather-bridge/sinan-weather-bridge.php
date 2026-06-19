@@ -181,7 +181,7 @@ class SinanWeatherBridge {
             'city' => $city_slug,
             'locationId' => 0,
             'weatherData' => json_decode( $weather_payload, true ),
-            'modules' => array( 'showTraffic' => true, 'showMarine' => true, 'showSki' => true )
+            'modules' => array( 'showTraffic' => true, 'showMarine' => true, 'showSki' => true, 'showAgri' => true )
         );
 
         $theme_url = get_stylesheet_directory_uri();

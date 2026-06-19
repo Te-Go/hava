@@ -967,6 +967,18 @@ const getWeatherIcon = (code: number, isDay: boolean, precipProb: number = 0): s
 }
 
 export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<WeatherData> => {
+  if (rawData && rawData.current_weather && !rawData.current) {
+    rawData.current = {
+      temperature_2m: rawData.current_weather.temperature ?? 0,
+      wind_speed_10m: rawData.current_weather.windspeed ?? 0,
+      wind_direction_10m: rawData.current_weather.winddirection ?? 0,
+      weather_code: rawData.current_weather.weathercode ?? 0,
+      relative_humidity_2m: 50,
+      apparent_temperature: rawData.current_weather.temperature ?? 0,
+      surface_pressure: 1013
+    };
+  }
+
   const data = sanitizeOpenMeteoPayload(rawData);
   const current = data.current;
   const hourly = data.hourly;
