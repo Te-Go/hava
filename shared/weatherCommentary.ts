@@ -1034,7 +1034,7 @@ const generateDailySummary = (
         let rainStatement = rainProb > 30
             ? `${rainProb}% yağış ihtimali var.`
             : `${modifier} yağış beklenmiyor.`;
-        return `${opener} hava ${condition}. Sıcaklık ${high}°/${low}° arasında. ${rainStatement}`;
+        return `${opener} hava ${condition}. Sıcaklık ${Math.round(high ?? 0)}°/${Math.round(low ?? 0)}° arasında. ${rainStatement}`;
     } else if (timeframe === 'tomorrow' && tomorrow) {
         const diff = tomorrow.high - high;
         const modifier = getConfidenceModifier(70, city, 'tomorrow'); // Medium confidence for tomorrow
@@ -1077,8 +1077,8 @@ const generateAnswerBlock = (
     city: string
 ): string => {
     const condition = (data.condition || '').toLowerCase();
-    const high = Math.round(data.high);
-    const low = Math.round(data.low);
+    const high = Math.round(data.high ?? 0);
+    const low = Math.round(data.low ?? 0);
     const rainProb = data.rainProb;
     const windSpeed = data.windSpeed;
     const windDir = getWindDirectionLabel(parseFloat(data.windDirection));
@@ -1100,7 +1100,7 @@ const generateAnswerBlock = (
 
     } else if (timeframe === 'tomorrow' && tomorrow) {
         // Tomorrow: Focus on changes from today
-        const diff = tomorrow.high - high;
+        const diff = tomorrow.high - (data.high ?? 0);
         let changeStatement = '';
         if (diff >= 3) {
             changeStatement = `Bugüne göre belirgin şekilde ısınıyor.`;
@@ -1119,7 +1119,7 @@ const generateAnswerBlock = (
             rainStatement = 'Yağış beklenmiyor.';
         }
 
-        return `Yarın ${city}'de hava ${(tomorrow.condition || '').toLowerCase()} olacak. Sıcaklık ${tomorrow.low}° ile ${tomorrow.high}° arasında. ${changeStatement} ${rainStatement}`;
+        return `Yarın ${city}'de hava ${(tomorrow.condition || '').toLowerCase()} olacak. Sıcaklık ${tomorrow.low ?? 0}° ile ${tomorrow.high ?? 0}° arasında. ${changeStatement} ${rainStatement}`;
 
     } else if (timeframe === 'weekend' && weekend.length >= 2) {
         // Weekend: Aggregate Saturday and Sunday

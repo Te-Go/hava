@@ -162,6 +162,8 @@ const sanitizeOpenMeteoPayload = (payload: any) => {
         weatherData: {
             ...wd,
             currentTemp: wd.current?.temperature_2m ?? wd.current_weather?.temperature ?? wd.currentTemp ?? wd.current_temp ?? 0,
+            high: wd.daily?.temperature_2m_max?.[0] ?? wd.high ?? 0,
+            low: wd.daily?.temperature_2m_min?.[0] ?? wd.low ?? 0,
             windSpeed: wd.current?.wind_speed_10m ?? wd.current_weather?.windspeed ?? wd.windSpeed ?? wd.wind_speed ?? 0,
             windDirection: wd.current_weather?.winddirection ?? wd.windDirection ?? wd.wind_direction ?? '',
             rainVolume: wd.rainVolume ?? wd.rain_volume ?? 0,
@@ -704,10 +706,8 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
         } else {
           const newWeatherData = await getWeatherData(currentCity);
           if (!isMounted) return;
-          if (newWeatherData) {
+            if (newWeatherData) {
             setWeatherData(newWeatherData);
-            // Force doorway widgets to stay visible during client-side fetches
-            setModules(payload?.modules || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
             
             if (isMetroCity(currentCity)) {
                fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));

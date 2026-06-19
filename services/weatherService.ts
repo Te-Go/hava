@@ -171,6 +171,7 @@ export const fromSlug = (slug: string): string => {
     // === PROVINCES (81 İL) ===
     // Marmara
     'istanbul': 'İstanbul',
+    'stanbul': 'İstanbul',
     'bursa': 'Bursa',
     'kocaeli': 'Kocaeli',
     'sakarya': 'Sakarya',
