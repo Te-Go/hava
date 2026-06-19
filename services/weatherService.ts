@@ -966,7 +966,7 @@ const getWeatherIcon = (code: number, isDay: boolean, precipProb: number = 0): s
   return 'cloudy'; // Safe fallback
 }
 
-const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<WeatherData> => {
+export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<WeatherData> => {
   const data = sanitizeOpenMeteoPayload(rawData);
   const current = data.current;
   const hourly = data.hourly;
