@@ -5,8 +5,9 @@
  * Provides a server-side proxy for TomTom Traffic Flow API to map traffic data
  * and cache responses to stay within API rate limits/quotas.
  * 
- * Usage: GET /wp-json/sinan/v1/traffic?lat=41.123&lon=29.123
- * Cache Usage: 20 minutes (1200 seconds) using WordPress Transients
+ * Usage: GET /wp-json/sinan/v1/traffic?city=istanbul
+ *        GET /wp-json/sinan/v1/traffic?lat=41.123&lon=29.123
+ * Cache Usage: 5 minutes (300 seconds) for aggregated city data, 20 minutes (1200 seconds) for coordinates
  */
 
 if (!defined('ABSPATH')) {
@@ -23,37 +24,45 @@ add_action('rest_api_init', function () {
 
 function handle_tomtom_proxy($request)
 {
-    // 1. Get Lat/Lon from request
+    $city = $request->get_param('city');
+    if ($city) {
+        $city_data = handle_tomtom_city_request($city);
+        if (is_wp_error($city_data)) {
+            return $city_data;
+        }
+        return rest_ensure_response($city_data);
+    }
+
     $lat = $request->get_param('lat');
     $lon = $request->get_param('lon');
 
-    // API Key (User provided)
-    // In production, consider moving this to wp-config.php: define('TOMTOM_API_KEY', '...');
-    $key = defined('TOMTOM_API_KEY') ? TOMTOM_API_KEY : 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5';
-
     if (!$lat || !$lon) {
-        return new WP_Error('missing_params', 'Latitude and Longitude required', array('status' => 400));
+        return new WP_Error('missing_params', 'City or Latitude/Longitude required', array('status' => 400));
     }
 
-    // 2. Check Transient Cache (20 minutes = 1200 seconds)
-    // Key: tomtom_flow_LAT_LON
-    // Round coords to 4 decimals to normalize cache hits (approx 11m precision)
-    // This ensures nearby requests hit the same cache
+    $flow_data = fetch_tomtom_flow_direct($lat, $lon);
+    if (is_wp_error($flow_data)) {
+        return $flow_data;
+    }
+
+    return rest_ensure_response($flow_data);
+}
+
+function fetch_tomtom_flow_direct($lat, $lon)
+{
+    $key = defined('TOMTOM_API_KEY') ? TOMTOM_API_KEY : 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5';
+    
     $lat_r = round((float) $lat, 4);
     $lon_r = round((float) $lon, 4);
     $cache_key = "tomtom_flow_{$lat_r}_{$lon_r}";
 
     $cached = get_transient($cache_key);
     if ($cached !== false) {
-        // Return cached response with header indicating cache hit (optional)
-        return rest_ensure_response($cached);
+        return $cached;
     }
 
-    // 3. Fetch from TomTom
-    // Flow Segment Data (Absolute, Zoom 10 for city-level view)
     $url = "https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key={$key}&point={$lat},{$lon}&unit=KMPH";
-
-    $response = wp_remote_get($url);
+    $response = wp_remote_get($url, array('timeout' => 10));
     if (is_wp_error($response)) {
         return $response;
     }
@@ -62,12 +71,271 @@ function handle_tomtom_proxy($request)
     $data = json_decode($body, true);
 
     if (isset($data['flowSegmentData'])) {
-        // Cache Valid Data for 20 Minutes (1200 seconds)
-        // Adjust this duration to manage daily quota (2500 requests)
-        // 20 mins * 3 points * 8 cities = ~1700 calls/day (Safe)
+        // Cache flow segments for 20 minutes (1200 seconds)
         set_transient($cache_key, $data, 1200);
-        return rest_ensure_response($data);
+        return $data;
     }
 
     return new WP_Error('tomtom_error', 'Invalid response from TomTom API', array('status' => 502));
+}
+
+function handle_tomtom_city_request($city)
+{
+    $cityKey = strtolower($city);
+    $cityKey = str_replace(
+        array('ı', 'ş', 'ğ', 'ü', 'ö', 'ç', 'İ', 'Ş', 'Ğ', 'Ü', 'Ö', 'Ç'),
+        array('i', 's', 'g', 'u', 'o', 'c', 'i', 's', 'g', 'u', 'o', 'c'),
+        $cityKey
+    );
+
+    // 1. 5-minute Transient Cache Check for aggregated city data
+    $cache_key = "tomtom_city_{$cityKey}";
+    $cached = get_transient($cache_key);
+    if ($cached !== false) {
+        return $cached;
+    }
+
+    // 2. Monitoring Choke Points Map
+    $city_points = array(
+        'istanbul' => array(
+            array('name' => 'E-5 (Bakırköy)', 'lat' => 40.9867, 'lon' => 28.8508),
+            array('name' => 'FSM Köprüsü', 'lat' => 41.0917, 'lon' => 29.0678),
+            array('name' => 'D-100 (Kartal)', 'lat' => 40.8922, 'lon' => 29.1967),
+            array('name' => '15 Temmuz Köprüsü', 'lat' => 41.0458, 'lon' => 29.0342),
+            array('name' => 'TEM (Seyrantepe)', 'lat' => 41.1064, 'lon' => 28.9925),
+            array('name' => 'Haliç Köprüsü', 'lat' => 41.0342, 'lon' => 28.9692),
+        ),
+        'ankara' => array(
+            array('name' => 'Eskişehir Yolu', 'lat' => 39.9167, 'lon' => 32.7833),
+            array('name' => 'Konya Yolu', 'lat' => 39.8833, 'lon' => 32.8667),
+            array('name' => 'İstanbul Yolu', 'lat' => 39.9667, 'lon' => 32.6833),
+            array('name' => 'Çankaya-Kızılay', 'lat' => 39.9272, 'lon' => 32.8644),
+        ),
+        'izmir' => array(
+            array('name' => 'Altınyol', 'lat' => 38.4192, 'lon' => 27.1287),
+            array('name' => 'Konak-Bornova', 'lat' => 38.4219, 'lon' => 27.1389),
+            array('name' => 'Çeşme Otoyolu', 'lat' => 38.4331, 'lon' => 27.0892),
+        ),
+        'bursa' => array(
+            array('name' => 'İstanbul Yolu', 'lat' => 40.2056, 'lon' => 28.9500),
+            array('name' => 'Mudanya Yolu', 'lat' => 40.2667, 'lon' => 28.8667),
+            array('name' => 'Yalova Yolu', 'lat' => 40.2333, 'lon' => 29.0167),
+        ),
+        'antalya' => array(
+            array('name' => 'D-400 (Lara)', 'lat' => 36.8533, 'lon' => 30.7267),
+            array('name' => 'Akdeniz Bulvarı', 'lat' => 36.8867, 'lon' => 30.6983),
+            array('name' => 'Aspendos Bulvarı', 'lat' => 36.8950, 'lon' => 30.7117),
+        ),
+        'konya' => array(
+            array('name' => 'Ankara Yolu', 'lat' => 37.9500, 'lon' => 32.4833),
+            array('name' => 'Meram Çevreyolu', 'lat' => 37.8500, 'lon' => 32.4500),
+            array('name' => 'Karaman Yolu', 'lat' => 37.8200, 'lon' => 32.5000),
+        ),
+        'adana' => array(
+            array('name' => 'Turhan Cemal Beriker', 'lat' => 37.0017, 'lon' => 35.3289),
+            array('name' => 'D-400 Mersin', 'lat' => 36.9850, 'lon' => 35.2900),
+            array('name' => 'Tarsus Otoyolu', 'lat' => 36.9917, 'lon' => 35.3500),
+        ),
+        'sanliurfa' => array(
+            array('name' => 'Diyarbakır Yolu', 'lat' => 37.1700, 'lon' => 38.8000),
+            array('name' => 'Mardin Yolu', 'lat' => 37.1500, 'lon' => 38.8200),
+        ),
+        'gaziantep' => array(
+            array('name' => 'İstasyon Caddesi', 'lat' => 37.0628, 'lon' => 37.3783),
+            array('name' => 'Suburcu Kavşağı', 'lat' => 37.0567, 'lon' => 37.3650),
+            array('name' => 'Adana Otoyolu', 'lat' => 37.0500, 'lon' => 37.4000),
+        ),
+        'kocaeli' => array(
+            array('name' => 'TEM Köprüsü', 'lat' => 40.7658, 'lon' => 29.9308),
+            array('name' => 'Gebze Çıkışı', 'lat' => 40.8028, 'lon' => 29.4308),
+            array('name' => 'D-100 Merkez', 'lat' => 40.7650, 'lon' => 29.9200),
+        ),
+        'mersin' => array(
+            array('name' => 'D-400 Merkez', 'lat' => 36.7950, 'lon' => 34.6200),
+            array('name' => 'Tarsus Yolu', 'lat' => 36.8100, 'lon' => 34.6500),
+        ),
+        'diyarbakir' => array(
+            array('name' => 'Elazığ Yolu', 'lat' => 37.9200, 'lon' => 40.2000),
+            array('name' => 'Mardin Yolu', 'lat' => 37.8800, 'lon' => 40.2200),
+        ),
+        'hatay' => array(
+            array('name' => 'Antakya Merkez', 'lat' => 36.2000, 'lon' => 36.1600),
+            array('name' => 'İskenderun Yolu', 'lat' => 36.5800, 'lon' => 36.1700),
+        ),
+        'manisa' => array(
+            array('name' => 'İzmir Yolu', 'lat' => 38.6200, 'lon' => 27.4000),
+            array('name' => 'Merkez Kavşak', 'lat' => 38.6150, 'lon' => 27.4300),
+        ),
+        'kayseri' => array(
+            array('name' => 'Sivas Yolu', 'lat' => 38.7500, 'lon' => 35.5000),
+            array('name' => 'Erciyes Yolu', 'lat' => 38.7200, 'lon' => 35.4500),
+        ),
+        'samsun' => array(
+            array('name' => 'Sahil Yolu', 'lat' => 41.2900, 'lon' => 36.3300),
+            array('name' => 'Ankara Yolu', 'lat' => 41.2700, 'lon' => 36.3500),
+        ),
+        'balikesir' => array(
+            array('name' => 'Bursa Yolu', 'lat' => 39.6500, 'lon' => 27.9000),
+            array('name' => 'İzmir Yolu', 'lat' => 39.6400, 'lon' => 27.8500),
+        ),
+        'tekirdag' => array(
+            array('name' => 'İstanbul Yolu', 'lat' => 41.0000, 'lon' => 27.5500),
+            array('name' => 'Çorlu Kavşağı', 'lat' => 41.1500, 'lon' => 27.8000),
+        ),
+        'aydin' => array(
+            array('name' => 'İzmir Yolu', 'lat' => 37.8500, 'lon' => 27.8200),
+            array('name' => 'Denizli Yolu', 'lat' => 37.8400, 'lon' => 27.8600),
+        ),
+        'van' => array(
+            array('name' => 'Erciş Yolu', 'lat' => 38.5200, 'lon' => 43.3500),
+            array('name' => 'İran Sınırı Yolu', 'lat' => 38.5000, 'lon' => 43.4500),
+        ),
+        'kahramanmaras' => array(
+            array('name' => 'Gaziantep Yolu', 'lat' => 37.5800, 'lon' => 36.9300),
+            array('name' => 'Adana Yolu', 'lat' => 37.5600, 'lon' => 36.9500),
+        ),
+        'sakarya' => array(
+            array('name' => 'TEM Otoyolu', 'lat' => 40.7400, 'lon' => 30.3500),
+            array('name' => 'İstanbul Yolu', 'lat' => 40.7500, 'lon' => 30.4000),
+        ),
+        'mugla' => array(
+            array('name' => 'Bodrum Yolu', 'lat' => 37.2100, 'lon' => 28.3500),
+            array('name' => 'Fethiye Yolu', 'lat' => 37.2200, 'lon' => 28.3800),
+        ),
+        'denizli' => array(
+            array('name' => 'İzmir Yolu', 'lat' => 37.7800, 'lon' => 29.0700),
+            array('name' => 'Antalya Yolu', 'lat' => 37.7700, 'lon' => 29.1000),
+        ),
+        'eskisehir' => array(
+            array('name' => 'Ankara Yolu', 'lat' => 39.7800, 'lon' => 30.5500),
+            array('name' => 'Bursa Yolu', 'lat' => 39.7700, 'lon' => 30.5000),
+        ),
+        'alanya' => array(
+            array('name' => 'D-400 Kaleiçi', 'lat' => 36.5437, 'lon' => 31.9994),
+        ),
+        'bodrum' => array(
+            array('name' => 'Turgutreis Yolu', 'lat' => 37.0344, 'lon' => 27.4305),
+        ),
+        'marmaris' => array(
+            array('name' => 'İçmeler Yolu', 'lat' => 36.8550, 'lon' => 28.2742),
+        ),
+        'fethiye' => array(
+            array('name' => 'Ölüdeniz Yolu', 'lat' => 36.6538, 'lon' => 29.1236),
+        ),
+    );
+
+    if (!isset($city_points[$cityKey])) {
+        return new WP_Error('invalid_city', 'City traffic monitoring is not configured for: ' . $city, array('status' => 404));
+    }
+
+    $points = $city_points[$cityKey];
+    $totalCurrentSpeed = 0;
+    $totalFreeFlowSpeed = 0;
+    $validPoints = 0;
+    $mainRoutes = array();
+
+    foreach ($points as $point) {
+        $lat = $point['lat'];
+        $lon = $point['lon'];
+        $flow = fetch_tomtom_flow_direct($lat, $lon);
+
+        if ($flow && !is_wp_error($flow) && isset($flow['flowSegmentData'])) {
+            $data = $flow['flowSegmentData'];
+            $validPoints++;
+            $currentSpeed = isset($data['currentSpeed']) ? $data['currentSpeed'] : 0;
+            $freeFlowSpeed = isset($data['freeFlowSpeed']) ? $data['freeFlowSpeed'] : 50;
+            $currentTravelTime = isset($data['currentTravelTime']) ? $data['currentTravelTime'] : 0;
+            $freeFlowTravelTime = isset($data['freeFlowTravelTime']) ? $data['freeFlowTravelTime'] : 0;
+
+            $totalCurrentSpeed += $currentSpeed;
+            $totalFreeFlowSpeed += $freeFlowSpeed;
+
+            $delaySeconds = $currentTravelTime - $freeFlowTravelTime;
+            $delayMinutes = max(0, round($delaySeconds / 60));
+
+            $speedRatio = $freeFlowSpeed > 0 ? $currentSpeed / $freeFlowSpeed : 1;
+            $status = 'normal';
+            if ($speedRatio < 0.3) {
+                $status = 'congested';
+            } elseif ($speedRatio < 0.6) {
+                $status = 'slow';
+            }
+
+            $mainRoutes[] = array(
+                'name' => $point['name'],
+                'delay' => (int)$delayMinutes,
+                'status' => $status
+            );
+        }
+    }
+
+    if ($validPoints === 0) {
+        return new WP_Error('no_traffic_data', 'No valid traffic data could be fetched for this city', array('status' => 502));
+    }
+
+    $avgCurrentSpeed = $totalCurrentSpeed / $validPoints;
+    $avgFreeFlowSpeed = $totalFreeFlowSpeed / $validPoints;
+
+    $speedRatio = $avgFreeFlowSpeed > 0 ? $avgCurrentSpeed / $avgFreeFlowSpeed : 1;
+    $congestionPercent = round((1 - $speedRatio) * 100);
+    $congestionPercent = max(0, min(100, $congestionPercent));
+
+    $congestionLevel = 'low';
+    if ($speedRatio >= 0.75) {
+        $congestionLevel = 'low';
+    } elseif ($speedRatio >= 0.5) {
+        $congestionLevel = 'medium';
+    } elseif ($speedRatio >= 0.25) {
+        $congestionLevel = 'high';
+    } else {
+        $congestionLevel = 'severe';
+    }
+
+    // Sort routes by delay desc
+    usort($mainRoutes, function($a, $b) {
+        return $b['delay'] - $a['delay'];
+    });
+
+    $levelDescriptions = array(
+        'low' => 'akıcı',
+        'medium' => 'yoğun',
+        'high' => 'çok yoğun',
+        'severe' => 'kilitli durumda'
+    );
+    
+    $displayCity = ucfirst($city);
+    $narrative = $displayCity . ' trafiği ' . $levelDescriptions[$congestionLevel] . '.';
+    if (count($mainRoutes) > 0 && $mainRoutes[0]['delay'] > 5) {
+        $narrative .= ' ' . $mainRoutes[0]['name'] . ' güzergahında ' . $mainRoutes[0]['delay'] . ' dakika gecikme var.';
+    }
+    
+    $congestedCount = 0;
+    foreach ($mainRoutes as $r) {
+        if ($r['status'] === 'congested') {
+            $congestedCount++;
+        }
+    }
+    if ($congestedCount > 1) {
+        $narrative .= ' ' . $congestedCount . ' ana güzergahta yoğunluk mevcut.';
+    }
+
+    $compiled_data = array(
+        'city' => $city,
+        'currentSpeed' => round($avgCurrentSpeed),
+        'freeFlowSpeed' => round($avgFreeFlowSpeed),
+        'currentTravelTime' => 0,
+        'freeFlowTravelTime' => 0,
+        'confidence' => 0.9,
+        'roadClosure' => false,
+        'congestionLevel' => $congestionLevel,
+        'congestionPercent' => (int)$congestionPercent,
+        'mainRoutes' => array_slice($mainRoutes, 0, 6),
+        'narrative' => $narrative,
+        'lastUpdated' => time() * 1000
+    );
+
+    // Cache the aggregated city data for 5 minutes (300 seconds)
+    set_transient($cache_key, $compiled_data, 300);
+
+    return $compiled_data;
 }

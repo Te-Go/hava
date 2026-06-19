@@ -608,6 +608,9 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           const safeWeatherData = await mapOpenMeteoToModel(citySlug, globalPayload.weatherData);
           setWeatherData(safeWeatherData);
           
+          const serverModules = globalPayload?.modules || payload?.modules;
+          setModules({ showTraffic: true, showMarine: true, showSki: true, showAgri: true, ...(serverModules || {}) });
+          
           if (hasTrafficMonitoring(citySlug)) {
              fetchTrafficData(citySlug).then(setTrafficData).catch(() => setTrafficData(null));
           } else setTrafficData(null);

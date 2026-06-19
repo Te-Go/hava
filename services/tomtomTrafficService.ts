@@ -241,88 +241,19 @@ export async function fetchTrafficData(
     return fetchWithCache(
         `traffic_v2_${cityKey}`,
         async () => {
-            console.log(`TomTom: Fetching traffic for ${city} (${points.length} points)`);
-
-            // Fetch data for all monitoring points
-            const results = await Promise.all(
-                points.map(async (point) => {
-                    const data = await fetchTomTomFlowData(point.lat, point.lon, apiKey);
-                    return { name: point.name, data };
-                })
-            );
-
-            // Calculate aggregate statistics
-            let totalCurrentSpeed = 0;
-            let totalFreeFlowSpeed = 0;
-            let validPoints = 0;
-
-            const mainRoutes: TomTomTrafficData['mainRoutes'] = [];
-
-            for (const result of results) {
-                if (result.data) {
-                    validPoints++;
-                    totalCurrentSpeed += result.data.currentSpeed;
-                    totalFreeFlowSpeed += result.data.freeFlowSpeed;
-
-                    // Calculate delay for this route
-                    const delaySeconds = result.data.currentTravelTime - result.data.freeFlowTravelTime;
-                    const delayMinutes = Math.max(0, Math.round(delaySeconds / 60));
-
-                    // Determine status
-                    const speedRatio = result.data.currentSpeed / result.data.freeFlowSpeed;
-                    let status: 'normal' | 'slow' | 'congested' = 'normal';
-                    if (speedRatio < 0.3) status = 'congested';
-                    else if (speedRatio < 0.6) status = 'slow';
-
-                    mainRoutes.push({
-                        name: result.name,
-                        delay: delayMinutes,
-                        status
-                    });
+            console.log(`TomTom: Fetching traffic for ${city} via REST proxy`);
+            try {
+                const url = `/wp-json/sinan/v1/traffic?city=${cityKey}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    console.error(`TomTom REST proxy error: ${response.status}`);
+                    return null;
                 }
-            }
-
-            if (validPoints === 0) {
-                console.error(`TomTom: No valid data for ${city}`);
+                return await response.json();
+            } catch (error) {
+                console.error('TomTom fetch failed:', error);
                 return null;
             }
-
-            // Calculate averages
-            const avgCurrentSpeed = totalCurrentSpeed / validPoints;
-            const avgFreeFlowSpeed = totalFreeFlowSpeed / validPoints;
-
-            // Calculate congestion level
-            const speedRatio = avgCurrentSpeed / avgFreeFlowSpeed;
-            const congestionPercent = Math.round((1 - speedRatio) * 100);
-
-            let congestionLevel: 'low' | 'medium' | 'high' | 'severe';
-            if (speedRatio >= 0.75) congestionLevel = 'low';
-            else if (speedRatio >= 0.5) congestionLevel = 'medium';
-            else if (speedRatio >= 0.25) congestionLevel = 'high';
-            else congestionLevel = 'severe';
-
-            // Sort routes by delay (worst first)
-            mainRoutes.sort((a, b) => b.delay - a.delay);
-
-            // Generate narrative
-            const narrative = generateTrafficNarrative(city, congestionLevel, mainRoutes);
-
-            console.log(`TomTom: ${city} - ${congestionLevel} (${congestionPercent}% congestion)`);
-
-            return {
-                city,
-                currentSpeed: Math.round(avgCurrentSpeed),
-                freeFlowSpeed: Math.round(avgFreeFlowSpeed),
-                currentTravelTime: 0,
-                freeFlowTravelTime: 0,
-                confidence: 0.9,
-                roadClosure: false,
-                congestionLevel,
-                congestionPercent: Math.max(0, Math.min(100, congestionPercent)),
-                mainRoutes: mainRoutes.slice(0, 6), // Top 6 routes
-                narrative,
-                lastUpdated: Date.now()
-            };
         },
         15 // 15 Min TTL
     );
