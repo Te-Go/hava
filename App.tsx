@@ -706,6 +706,8 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           if (!isMounted) return;
           if (newWeatherData) {
             setWeatherData(newWeatherData);
+            // Force doorway widgets to stay visible during client-side fetches
+            setModules(payload?.modules || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
             
             if (isMetroCity(currentCity)) {
                fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));

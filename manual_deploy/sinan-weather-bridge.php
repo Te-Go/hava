@@ -115,7 +115,15 @@ class SinanWeatherBridge {
         }
 
         $raw_city = get_query_var('weather_city') ? get_query_var('weather_city') : 'istanbul';
-        $tr_map = array('İ'=>'i', 'I'=>'i', 'ı'=>'i', 'ş'=>'s', 'ğ'=>'g', 'ç'=>'c', 'ö'=>'o', 'ü'=>'u', 'Ş'=>'s', 'Ğ'=>'g', 'Ç'=>'c', 'Ö'=>'o', 'Ü'=>'u');
+        $tr_map = array(
+            urldecode('%C4%B0')=>'i', urldecode('%C4%B1')=>'i', 
+            urldecode('%C5%9E')=>'s', urldecode('%C5%9F')=>'s', 
+            urldecode('%C4%9E')=>'g', urldecode('%C4%9F')=>'g', 
+            urldecode('%C3%87')=>'c', urldecode('%C3%A7')=>'c', 
+            urldecode('%C3%96')=>'o', urldecode('%C3%B6')=>'o', 
+            urldecode('%C3%9C')=>'u', urldecode('%C3%BC')=>'u',
+            'I'=>'i'
+        );
         $city_slug = sanitize_title(strtolower(strtr($raw_city, $tr_map)));
         $cache_dir = wp_upload_dir()['basedir'] . '/sinan-weather-cache';
         $live_file = "{$cache_dir}/{$city_slug}.json";

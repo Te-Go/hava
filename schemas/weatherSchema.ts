@@ -16,36 +16,36 @@ export const openMeteoSchema = z.object({
     time: '', is_day: 1, temperature_2m: 0, weather_code: 0, wind_speed_10m: 0, relative_humidity_2m: 50, apparent_temperature: 0, surface_pressure: 1013
   }),
   hourly: z.object({
-    time: z.array(z.string()).catch([]),
-    temperature_2m: z.array(z.number()).catch([]),
-    precipitation_probability: z.array(z.number()).catch([]),
-    precipitation: z.array(z.number()).catch([]),
-    weather_code: z.array(z.number()).catch([]),
-    is_day: z.array(z.number()).catch([]),
-    wind_speed_10m: z.array(z.number()).catch([]),
-    wind_direction_10m: z.array(z.number()).catch([]),
-    apparent_temperature: z.array(z.number()).catch([]),
-    relative_humidity_2m: z.array(z.number()).catch([]),
-    uv_index: z.array(z.number()).catch([]),
-    visibility: z.array(z.number()).catch([]),
-    surface_pressure: z.array(z.number()).catch([]),
+    time: z.array(z.string()).catch(['']),
+    temperature_2m: z.array(z.number()).catch([0]),
+    precipitation_probability: z.array(z.number()).catch([0]),
+    precipitation: z.array(z.number()).catch([0]),
+    weather_code: z.array(z.number()).catch([0]),
+    is_day: z.array(z.number()).catch([0]),
+    wind_speed_10m: z.array(z.number()).catch([0]),
+    wind_direction_10m: z.array(z.number()).catch([0]),
+    apparent_temperature: z.array(z.number()).catch([0]),
+    relative_humidity_2m: z.array(z.number()).catch([0]),
+    uv_index: z.array(z.number()).catch([0]),
+    visibility: z.array(z.number()).catch([0]),
+    surface_pressure: z.array(z.number()).catch([0]),
   }).catch({
-    time: [], temperature_2m: [], precipitation_probability: [], precipitation: [], weather_code: [], is_day: [], wind_speed_10m: [], wind_direction_10m: [], apparent_temperature: [], relative_humidity_2m: [], uv_index: [], visibility: [], surface_pressure: []
+    time: [''], temperature_2m: [0], precipitation_probability: [0], precipitation: [0], weather_code: [0], is_day: [0], wind_speed_10m: [0], wind_direction_10m: [0], apparent_temperature: [0], relative_humidity_2m: [0], uv_index: [0], visibility: [0], surface_pressure: [0]
   }),
   daily: z.object({
-    time: z.array(z.string()).catch([]),
-    weather_code: z.array(z.number()).catch([]),
-    temperature_2m_max: z.array(z.number()).catch([]),
-    temperature_2m_min: z.array(z.number()).catch([]),
-    precipitation_sum: z.array(z.number()).catch([]),
-    wind_speed_10m_max: z.array(z.number()).catch([]),
-    uv_index_max: z.array(z.number()).catch([]),
-    precipitation_probability_max: z.array(z.number()).catch([]),
-    apparent_temperature_max: z.array(z.number()).catch([]),
-    sunrise: z.array(z.string()).catch([]),
-    sunset: z.array(z.string()).catch([]),
+    time: z.array(z.string()).catch(['']),
+    weather_code: z.array(z.number()).catch([0]),
+    temperature_2m_max: z.array(z.number()).catch([0]),
+    temperature_2m_min: z.array(z.number()).catch([0]),
+    precipitation_sum: z.array(z.number()).catch([0]),
+    wind_speed_10m_max: z.array(z.number()).catch([0]),
+    uv_index_max: z.array(z.number()).catch([0]),
+    precipitation_probability_max: z.array(z.number()).catch([0]),
+    apparent_temperature_max: z.array(z.number()).catch([0]),
+    sunrise: z.array(z.string()).catch(['']),
+    sunset: z.array(z.string()).catch(['']),
   }).catch({
-    time: [], weather_code: [], temperature_2m_max: [], temperature_2m_min: [], precipitation_sum: [], wind_speed_10m_max: [], uv_index_max: [], precipitation_probability_max: [], apparent_temperature_max: [], sunrise: [], sunset: []
+    time: [''], weather_code: [0], temperature_2m_max: [0], temperature_2m_min: [0], precipitation_sum: [0], wind_speed_10m_max: [0], uv_index_max: [0], precipitation_probability_max: [0], apparent_temperature_max: [0], sunrise: [''], sunset: ['']
   })
 });
 
@@ -58,8 +58,8 @@ export const sanitizeOpenMeteoPayload = (data: unknown) => {
     return {
       latitude: 0, longitude: 0,
       current: { time: '', is_day: 1, temperature_2m: 0, weather_code: 0, wind_speed_10m: 0, relative_humidity_2m: 50, apparent_temperature: 0, surface_pressure: 1013 },
-      hourly: { time: [], temperature_2m: [], precipitation_probability: [], precipitation: [], weather_code: [], is_day: [], wind_speed_10m: [], wind_direction_10m: [], apparent_temperature: [], relative_humidity_2m: [], uv_index: [], visibility: [], surface_pressure: [] },
-      daily: { time: [], weather_code: [], temperature_2m_max: [], temperature_2m_min: [], precipitation_sum: [], wind_speed_10m_max: [], uv_index_max: [], precipitation_probability_max: [], apparent_temperature_max: [], sunrise: [], sunset: [] }
+      hourly: { time: [''], temperature_2m: [0], precipitation_probability: [0], precipitation: [0], weather_code: [0], is_day: [0], wind_speed_10m: [0], wind_direction_10m: [0], apparent_temperature: [0], relative_humidity_2m: [0], uv_index: [0], visibility: [0], surface_pressure: [0] },
+      daily: { time: [''], weather_code: [0], temperature_2m_max: [0], temperature_2m_min: [0], precipitation_sum: [0], wind_speed_10m_max: [0], uv_index_max: [0], precipitation_probability_max: [0], apparent_temperature_max: [0], sunrise: [''], sunset: [''] }
     };
   }
 };
