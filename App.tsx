@@ -312,6 +312,9 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   const [fireRiskData, setFireRiskData] = useState<FireRiskData | null>(null);
   const [tourismData, setTourismData] = useState<TourismData | null>(null);
 
+  // Doorway Modules State
+  const [modules, setModules] = useState<any>(payload?.modules || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
+
   // DEBUG: Log mount state
   useEffect(() => {
     console.warn('🔴 [DEBUG-MOUNT] currentCity:', currentCity);
@@ -708,6 +711,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           if (!isMounted) return;
             if (newWeatherData) {
             setWeatherData(newWeatherData);
+            setModules(payload?.modules || { showTraffic: true, showMarine: true, showSki: true, showAgri: true });
             
             if (isMetroCity(currentCity)) {
                fetchTrafficData(currentCity).then(setTrafficData).catch(() => setTrafficData(null));
@@ -985,10 +989,10 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                   <div className="mb-8 animate-fadeIn delay-100">
                     <LazySection>
                       <IslandPanel
-                        traffic={trafficData}
-                        marine={marineData}
-                        ski={skiData}
-                        agriculture={agricultureData}
+                        traffic={modules?.showTraffic ? trafficData : null}
+                        marine={modules?.showMarine ? marineData : null}
+                        ski={modules?.showSki ? skiData : null}
+                        agriculture={modules?.showAgri ? agricultureData : null}
                         altitude={altitudeData}
                         fireRisk={fireRiskData}
                         tourism={tourismData}

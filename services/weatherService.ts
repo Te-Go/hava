@@ -992,16 +992,16 @@ const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<WeatherD
     hourlyData.push({
       time: hTime,
       fullDate: fullDate, // Store full date for grouping
-      temp: hourly.temperature_2m[i],
-      icon: getWeatherIcon(code, isHourDay, prob),
-      precipProb: prob,
-      windSpeed: Math.round(hourly.wind_speed_10m[i]),
-      feelsLike: Math.round(hourly.apparent_temperature[i]),
+      temp: hourly.temperature_2m?.[i] ?? 0,
+      icon: getWeatherIcon(code ?? 0, isHourDay, prob ?? 0),
+      precipProb: prob ?? 0,
+      windSpeed: Math.round(hourly.wind_speed_10m?.[i] ?? 0),
+      feelsLike: Math.round(hourly.apparent_temperature?.[i] ?? 0),
       isDay: isHourDay,
-      humidity: hourly.relative_humidity_2m[i] || 50, // Real humidity data
-      uvIndex: hourly.uv_index[i] || 0,                // Real UV index data
+      humidity: hourly.relative_humidity_2m?.[i] ?? 50, // Real humidity data
+      uvIndex: hourly.uv_index?.[i] ?? 0,                // Real UV index data
       visibility: (hourly.visibility && hourly.visibility[i]) ? Math.round(hourly.visibility[i] / 1000) : 10, // Convert m to km
-      precipitation: hourly.precipitation ? (hourly.precipitation[i] || 0) : 0 // New Mapping
+      precipitation: hourly.precipitation ? (hourly.precipitation[i] ?? 0) : 0 // New Mapping
     });
   }
 
@@ -1022,42 +1022,42 @@ const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<WeatherD
       day: displayDay,
       date: dateStr,
       fullDate: fullDate, // Store ISO date
-      icon: getWeatherIcon(code, true, prob), // Passed prob
-      high: Math.round(daily.temperature_2m_max[i]),
-      low: Math.round(daily.temperature_2m_min[i]),
+      icon: getWeatherIcon(code ?? 0, true, prob ?? 0), // Passed prob
+      high: Math.round(daily.temperature_2m_max?.[i] ?? 0),
+      low: Math.round(daily.temperature_2m_min?.[i] ?? 0),
       condition: WMO_TRANSLATION[code] || "Hava Durumu",
-      rainProb: prob,
-      wind: Math.round(daily.wind_speed_10m_max[i]) + ' km/sa',
+      rainProb: prob ?? 0,
+      wind: Math.round(daily.wind_speed_10m_max?.[i] ?? 0) + ' km/sa',
       humidity: 50,
-      feelsLike: Math.round(daily.apparent_temperature_max[i] || daily.temperature_2m_max[i]), // New Mapping
-      uvIndex: daily.uv_index_max ? Math.round(daily.uv_index_max[i]) : 0, // New Mapping
+      feelsLike: Math.round((daily.apparent_temperature_max?.[i] ?? daily.temperature_2m_max?.[i]) ?? 0), // New Mapping
+      uvIndex: daily.uv_index_max ? Math.round(daily.uv_index_max?.[i] ?? 0) : 0, // New Mapping
       // Estimate daily visibility from hourly at noon (approx index i*24 + 12)
       visibility: (hourly.visibility && hourly.visibility[i * 24 + 12]) ? Math.round(hourly.visibility[i * 24 + 12] / 1000) : 10,
-      precipitationSum: daily.precipitation_sum ? (daily.precipitation_sum[i] || 0) : 0 // New Mapping
+      precipitationSum: daily.precipitation_sum ? (daily.precipitation_sum[i] ?? 0) : 0 // New Mapping
     });
   }
 
   return {
     city: city,
     // API response contains accurate coordinates from geocoding
-    coord: { lat: data.latitude, lon: data.longitude },
-    currentTemp: current.temperature_2m,
+    coord: { lat: data.latitude ?? 0, lon: data.longitude ?? 0 },
+    currentTemp: current.temperature_2m ?? 0,
     condition: WMO_TRANSLATION[current.weather_code] || "Hava Durumu",
-    icon: getWeatherIcon(current.weather_code, isDay, currentRainProb), // Passed prob
-    smartPhrase: generateSmartPhrase(current.temperature_2m, current.weather_code, current.wind_speed_10m, hourly.uv_index[validIndex]),
-    high: daily.temperature_2m_max[0],
-    low: daily.temperature_2m_min[0],
-    windSpeed: current.wind_speed_10m,
+    icon: getWeatherIcon(current.weather_code ?? 0, isDay, currentRainProb ?? 0), // Passed prob
+    smartPhrase: generateSmartPhrase(current.temperature_2m ?? 0, current.weather_code ?? 0, current.wind_speed_10m ?? 0, hourly.uv_index?.[validIndex] ?? 0),
+    high: daily.temperature_2m_max?.[0] ?? 0,
+    low: daily.temperature_2m_min?.[0] ?? 0,
+    windSpeed: current.wind_speed_10m ?? 0,
     windDirection: current.wind_direction_10m?.toString() || "0", // 0 degrees = North
-    rainVolume: current.precipitation || 0,
-    rainProb: currentRainProb,
-    humidity: current.relative_humidity_2m,
-    uvIndex: hourly.uv_index[validIndex] || 0,
-    feelsLike: current.apparent_temperature,
-    pressure: current.surface_pressure,
-    aqi: await fetchAirQuality(data.latitude, data.longitude),
-    sunrise: daily.sunrise[0]?.split('T')[1] || '06:00',
-    sunset: daily.sunset[0]?.split('T')[1] || '18:00',
+    rainVolume: current.precipitation ?? 0,
+    rainProb: currentRainProb ?? 0,
+    humidity: current.relative_humidity_2m ?? 0,
+    uvIndex: hourly.uv_index?.[validIndex] ?? 0,
+    feelsLike: current.apparent_temperature ?? 0,
+    pressure: current.surface_pressure ?? 0,
+    aqi: await fetchAirQuality(data.latitude ?? 0, data.longitude ?? 0),
+    sunrise: daily.sunrise?.[0]?.split('T')[1] || '06:00',
+    sunset: daily.sunset?.[0]?.split('T')[1] || '18:00',
     cloudCover: current.cloud_cover ?? 0,
     hourly: hourlyData,
     daily: dailyData
