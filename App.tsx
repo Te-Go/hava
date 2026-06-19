@@ -932,7 +932,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                         altitude={altitudeData}
                         fireRisk={fireRiskData}
                         tourism={tourismData}
-                        cityDisplay={currentCity}
+                        cityDisplay={fromSlug(currentCity)}
                         trafficCityDisplay={trafficCityDisplay}
                         marineCityDisplay={marineCityDisplay}
                         fallbackNarrative={generateWeatherCommentary(displayData, view.type === 'tomorrow' ? 'tomorrow' : 'today').answerBlock}
