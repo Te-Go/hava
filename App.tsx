@@ -928,20 +928,22 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
               );
             })()}
             {loading ? (
-              <div className="animate-fadeIn mt-4 w-full">
-                 <HeroSkeleton />
-                 {view.type !== '15-days' && <IslandSkeleton />}
-                 {view.type !== '15-days' && (
-                    <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
-                       <div className="w-full md:w-1/2">
-                          <LifestyleSkeleton />
-                       </div>
-                       <div className="w-full md:w-1/2">
-                          <RadarSkeleton />
-                       </div>
-                    </div>
-                 )}
-                 {view.type !== '15-days' && <HourlySkeleton />}
+              <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="animate-fadeIn w-full">
+                   <HeroSkeleton />
+                   {view.type !== '15-days' && <IslandSkeleton />}
+                   {view.type !== '15-days' && (
+                      <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-6">
+                         <div className="w-full md:w-1/2">
+                            <LifestyleSkeleton />
+                         </div>
+                         <div className="w-full md:w-1/2">
+                            <RadarSkeleton />
+                         </div>
+                      </div>
+                   )}
+                   {view.type !== '15-days' && <HourlySkeleton />}
+                </div>
               </div>
             ) : !displayData ? (
               <div className="p-4 text-left text-red-700 bg-red-50 border border-red-500 rounded-lg font-mono text-xs overflow-auto max-w-4xl mx-auto my-8">
