@@ -413,8 +413,11 @@ class TedderAPIProxy {
         $app_id  = get_option( 'tedder_wu_app_id' );
         $app_key = get_option( 'tedder_wu_app_key' );
 
-        if ( empty( $app_id ) || empty( $app_key ) ) {
-            return new WP_Error( 'missing_key', 'WeatherUnlocked API credentials not configured', array( 'status' => 500 ) );
+        if ( empty( $app_id ) ) {
+            $app_id = '904fe6ce'; // Fallback app ID
+        }
+        if ( empty( $app_key ) ) {
+            $app_key = '6034c52f1991fd234505fd851f309fe7'; // Fallback app key
         }
 
         $cache_key = 'tedder_ski_data_' . md5($resort_id);

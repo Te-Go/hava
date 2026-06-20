@@ -4,6 +4,8 @@
  * Calculates tourism comfort index for historical/cultural sites.
  * Provides best time to visit and walking advisories.
  */
+import { toSlug } from './weatherService';
+
 
 export interface TourismData {
     comfortIndex: number;       // 1-10 scale
@@ -87,17 +89,10 @@ const toAscii = (s: string) => {
         .replace(/ı/g, 'i');  // Turkish lowercase dotless i
 };
 
-/**
- * Get historical site name with Turkish char normalization
- */
 function getSiteName(cityName: string): string | undefined {
-    // Direct lookup first
-    if (HISTORICAL_SITES[cityName]) return HISTORICAL_SITES[cityName];
-
-    // ASCII-folded lookup
-    const normalizedCity = toAscii(cityName.trim());
+    const slugifiedCity = toSlug(cityName);
     for (const [province, site] of Object.entries(HISTORICAL_SITES)) {
-        if (toAscii(province) === normalizedCity) return site;
+        if (toSlug(province) === slugifiedCity) return site;
     }
     return undefined;
 }
@@ -261,17 +256,9 @@ function generateTourismAdvice(
     return `${siteMention}koşullar uygun. Bol su için ve şapka takın.`;
 }
 
-/**
- * Check if a city is a tourism hotspot
- */
 export function isTourismRegion(cityName: string): boolean {
-    const normalizedCity = toAscii(cityName.trim());
-
-    return Object.keys(HISTORICAL_SITES).some(province => {
-        // Try exact lowercase match first
-        if (province.toLowerCase() === cityName.toLowerCase()) return true;
-        // Try ASCII-folded match (e.g., 'Istanbul' matches 'İstanbul')
-        if (toAscii(province) === normalizedCity) return true;
-        return false;
-    });
+    const slugifiedCity = toSlug(cityName);
+    return Object.keys(HISTORICAL_SITES).some(province => 
+        toSlug(province) === slugifiedCity
+    );
 }

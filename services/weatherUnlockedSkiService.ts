@@ -1,4 +1,5 @@
-import { SkiData, SKI_RESORTS, calculateSkiConditions } from './skiService';
+import { SkiData, SKI_RESORTS, calculateSkiConditions, resolveSkiCityKey } from './skiService';
+import { toSlug } from './weatherService';
 
 // Resort Map (User Provided IDs) - keyed by RESORT name
 const RESORT_IDS: Record<string, string> = {
@@ -27,21 +28,10 @@ const CITY_TO_RESORT: Record<string, string> = {
     'manisa': 'spil',
 };
 
-// Normalize Turkish characters
-function normalizeKey(str: string): string {
-    return str.toLowerCase()
-        .replace(/ı/g, 'i')
-        .replace(/ş/g, 's')
-        .replace(/ğ/g, 'g')
-        .replace(/ü/g, 'u')
-        .replace(/ö/g, 'o')
-        .replace(/ç/g, 'c');
-}
-
 import { fetchWithCache } from './cacheService';
 
 export async function fetchWeatherUnlockedSki(city: string): Promise<SkiData | null> {
-    const cityKey = normalizeKey(city);
+    const cityKey = toSlug(city);
 
     // First, try direct resort lookup (e.g., 'uludag' passed directly)
     let resortKey = RESORT_IDS[cityKey] ? cityKey : null;
@@ -100,10 +90,11 @@ export async function fetchWeatherUnlockedSki(city: string): Promise<SkiData | n
     ).catch(e => {
         console.warn('[Ski] API fetch failed, using calculated fallback:', e);
         // FALLBACK
-        const resort = SKI_RESORTS[cityKey];
+        const resolvedCity = resolveSkiCityKey(cityKey);
+        const resort = SKI_RESORTS[resolvedCity];
         if (resort) {
             return calculateSkiConditions(
-                cityKey, -5, 5, 20, 50, 10
+                resolvedCity, -5, 5, 20, 50, 10
             );
         }
         return null;
