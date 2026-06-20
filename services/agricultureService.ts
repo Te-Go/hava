@@ -163,15 +163,15 @@ function generatePlantingAdvice(
 export function isAgricultureRegion(cityName: string): boolean {
     const fold = (s: string) => {
         let r = s
-            .replace(/İ/g, 'i')
-            .replace(/I/g, 'i')
+            .replace(/İ/g, 'i')   // Turkish uppercase I-dot → i
+            .replace(/I/g, 'i')   // Standard I → i
             .replace(/Ş/g, 's')
             .replace(/Ğ/g, 'g')
             .replace(/Ü/g, 'u')
             .replace(/Ö/g, 'o')
             .replace(/Ç/g, 'c');
         return r.toLowerCase()
-            .replace(/ı/g, 'i')
+            .replace(/ı/g, 'i')   // Turkish lowercase dotless i
             .replace(/ş/g, 's')
             .replace(/ğ/g, 'g')
             .replace(/ü/g, 'u')
