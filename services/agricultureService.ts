@@ -162,11 +162,9 @@ function generatePlantingAdvice(
  */
 export function isAgricultureRegion(cityName: string): boolean {
     const fold = (s: string) => {
-        // Replace uppercase Turkish chars BEFORE toLowerCase to avoid
-        // locale-dependent İ→i̇ corruption on Linux production servers
         let r = s
             .replace(/İ/g, 'i')   // Turkish uppercase I-dot → i
-            .replace(/I/g, 'i')   // Standard I → i (not ı)
+            .replace(/I/g, 'i')   // Standard I → i
             .replace(/Ş/g, 's')
             .replace(/Ğ/g, 'g')
             .replace(/Ü/g, 'u')
