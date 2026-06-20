@@ -36,6 +36,13 @@ class TedderAPIProxy {
             'callback' => array( $this, 'proxy_keycollect_finance' ),
             'permission_callback' => '__return_true'
         ));
+
+        // Test Route to verify deployment
+        register_rest_route( 'sinan/v1', '/test_deploy', array(
+            'methods'  => 'GET',
+            'callback' => function() { return array('status' => 'deployed', 'time' => time()); },
+            'permission_callback' => '__return_true'
+        ));
     }
 
     /**
