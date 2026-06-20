@@ -40,7 +40,7 @@ function handle_ski_proxy($request)
     }
 
     // Fetch 7-day forecast
-    $url = "http://api.weatherunlocked.com/api/resortforecast/{$id}?app_id={$app_id}&app_key={$app_key}";
+    $url = "https://api.weatherunlocked.com/api/resortforecast/{$id}?app_id={$app_id}&app_key={$app_key}";
 
     $response = wp_remote_get($url);
     if (is_wp_error($response)) {

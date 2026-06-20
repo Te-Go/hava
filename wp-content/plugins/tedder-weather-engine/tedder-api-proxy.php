@@ -427,7 +427,7 @@ class TedderAPIProxy {
         $last_fetch  = get_option( $time_key );
 
         if ( ! $cached_data || $this->is_tedder_ski_cache_expired( $last_fetch ) ) {
-            $url = "http://api.weatherunlocked.com/api/resortforecast/{$resort_id}?app_id={$app_id}&app_key={$app_key}";
+            $url = "https://api.weatherunlocked.com/api/resortforecast/{$resort_id}?app_id={$app_id}&app_key={$app_key}";
             $response = wp_remote_get( $url, array( 'timeout' => 10 ) );
 
             if ( is_wp_error( $response ) ) {
