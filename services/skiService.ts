@@ -2,12 +2,12 @@ import { toSlug } from './weatherService';
 
 export interface SkiData {
     resort: string;
-    snowDepth: number;
-    freshSnow24h: number;
-    baseTemp: number;
-    summitTemp: number;
-    liftsOpen: number;
-    liftsTotal: number;
+    snowDepth: number;        
+    freshSnow24h: number;     
+    baseTemp: number;         
+    summitTemp: number;       
+    liftsOpen: number;        
+    liftsTotal: number;       
     avalancheRisk: 'low' | 'moderate' | 'considerable' | 'high';
     snowCondition: 'powder' | 'packed' | 'icy' | 'slushy' | 'closed';
     visibility: 'good' | 'moderate' | 'poor';
@@ -18,9 +18,9 @@ export interface SkiData {
 export interface SkiResortInfo {
     name: string;
     city: string;
-    elevation: { base: number; summit: number };
+    elevation: { base: number; summit: number };  
     totalLifts: number;
-    seasonStart: number;
+    seasonStart: number;  
     seasonEnd: number;
 }
 
@@ -57,11 +57,57 @@ export function resolveSkiCityKey(city: string): string {
     return RESORT_TO_CITY[cityKey] || cityKey;
 }
 
-export function calculateSkiConditions(cityKey: string, currentTemp: number, precipitation: number, windSpeed: number, cloudCover: number): SkiData | null {
+export function calculateSkiConditions(
+    cityKey: string,
+    currentTemp: number,
+    precipitation: number,  
+    windSpeed: number,      
+    cloudCover: number,     
+    snowfallMm: number = 0  
+): SkiData | null {
     const resolvedKey = resolveSkiCityKey(cityKey);
     const resort = SKI_RESORTS[resolvedKey];
     if (!resort) return null;
+
+    const month = new Date().getMonth() + 1;
+    const inSeason = currentTemp <= 4 && (month >= 11 || month <= 4);
+
+    const elevationDiff = (resort.elevation.summit - resort.elevation.base) / 1000;
+    const summitTemp = Math.round(currentTemp - (elevationDiff * 6.5));
+
+    let snowDepth = inSeason ? 75 : 0;
+    let freshSnow = (summitTemp <= 0 && precipitation > 0) ? Math.round(precipitation * 10) : 0;
+    if (freshSnow > 0) snowDepth += freshSnow;
+
+    const snowCondition = !inSeason ? 'closed' : freshSnow > 15 ? 'powder' : currentTemp > 2 ? 'slushy' : 'packed';
+    const avalancheRisk = freshSnow > 30 ? 'high' : freshSnow > 10 ? 'moderate' : 'low';
+    const visibility = cloudCover > 80 ? 'poor' : cloudCover > 40 ? 'moderate' : 'good';
+
+    let openLifts = resort.totalLifts;
+    if (windSpeed > 50) openLifts = Math.round(resort.totalLifts * 0.2);
+    else if (windSpeed > 30) openLifts = Math.round(resort.totalLifts * 0.6);
+    if (!inSeason) openLifts = 0;
+
+    let narrative = `${resort.name} merkezinde kar kalınlığı ${snowDepth} cm. `;
+    if (inSeason) {
+        narrative += `Pistler açık ve kayak için ${snowCondition === 'powder' ? 'harika bir toz kar' : 'uygun koşullar'} mevcut.`;
+        if (windSpeed > 40) narrative += ' ⚠️ Kuvvetli rüzgar nedeniyle telesiyej operasyonlarında kısıtlamalar olabilir.';
+    } else {
+        narrative = `${resort.name} tesisleri şu an sezon dışı olması sebebiyle kapalıdır.`;
+    }
+
     return {
-        resort: resort.name, snowDepth: 65, freshSnow24h: 5, baseTemp: currentTemp, summitTemp: currentTemp - 5, liftsOpen: resort.totalLifts - 2, liftsTotal: resort.totalLifts, avalancheRisk: 'low', snowCondition: 'powder', visibility: 'good', narrative: `${resort.name} pistleri açık ve kar kalitesi kayak için ideal durumda.`, lastUpdated: Date.now()
+        resort: resort.name,
+        snowDepth,
+        freshSnow24h: freshSnow,
+        baseTemp: currentTemp,
+        summitTemp,
+        liftsOpen: openLifts,
+        liftsTotal: resort.totalLifts,
+        avalancheRisk,
+        snowCondition,
+        visibility,
+        narrative,
+        lastUpdated: Date.now()
     };
 }
