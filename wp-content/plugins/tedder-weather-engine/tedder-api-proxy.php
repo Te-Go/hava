@@ -36,13 +36,6 @@ class TedderAPIProxy {
             'callback' => array( $this, 'proxy_keycollect_finance' ),
             'permission_callback' => '__return_true'
         ));
-
-        // Test Route to verify deployment
-        register_rest_route( 'sinan/v1', '/test_deploy', array(
-            'methods'  => 'GET',
-            'callback' => function() { return array('status' => 'deployed', 'time' => time()); },
-            'permission_callback' => '__return_true'
-        ));
     }
 
     /**
@@ -435,19 +428,28 @@ class TedderAPIProxy {
 
         if ( ! $cached_data || $this->is_tedder_ski_cache_expired( $last_fetch ) ) {
             $url = "https://api.weatherunlocked.com/api/resortforecast/{$resort_id}?app_id={$app_id}&app_key={$app_key}";
-            $response = wp_remote_get( $url, array( 'timeout' => 10 ) );
+            $response = wp_remote_get( $url, array( 'timeout' => 3 ) );
 
             if ( is_wp_error( $response ) ) {
-                return $response;
+                // Cache error state for 5 minutes to avoid server hangs on subsequent loads
+                $error_data = array( 'error' => true, 'message' => $response->get_error_message() );
+                set_transient( $cache_key, json_encode( $error_data ), 300 );
+                update_option( $time_key, time() );
+                $cached_data = json_encode( $error_data );
+            } else {
+                $body = wp_remote_retrieve_body( $response );
+                $data = json_decode( $body, true );
+                if ( isset( $data['forecast'] ) ) {
+                    set_transient( $cache_key, $body, 6 * HOUR_IN_SECONDS );
+                    update_option( $time_key, time() );
+                    $cached_data = $body;
+                } else {
+                    $error_data = array( 'error' => true, 'message' => 'Invalid API response' );
+                    set_transient( $cache_key, json_encode( $error_data ), 300 );
+                    update_option( $time_key, time() );
+                    $cached_data = json_encode( $error_data );
+                }
             }
-
-            $body = wp_remote_retrieve_body( $response );
-            
-            // Set transient to 6 hours fallback, update exact timestamp
-            set_transient( $cache_key, $body, 6 * HOUR_IN_SECONDS );
-            update_option( $time_key, time() ); 
-            
-            $cached_data = $body;
         }
 
         $response = new WP_REST_Response( json_decode( $cached_data, true ) );
