@@ -331,14 +331,26 @@ function generateSkiNarrative(
  * Check if city (or resort name) has a ski resort
  */
 export function hasSkiResort(city: string): boolean {
-    const fold = (s: string) => s.toLowerCase()
-        .replace(/ı/g, 'i').replace(/İ/g, 'i')
-        .replace(/ş/g, 's').replace(/Ş/g, 's')
-        .replace(/ğ/g, 'g').replace(/Ğ/g, 'g')
-        .replace(/ü/g, 'u').replace(/Ü/g, 'u')
-        .replace(/ö/g, 'o').replace(/Ö/g, 'o')
-        .replace(/ç/g, 'c').replace(/Ç/g, 'c')
-        .trim();
+    const fold = (s: string) => {
+        // Replace uppercase Turkish chars BEFORE toLowerCase to avoid
+        // locale-dependent İ→i̇ corruption on Linux production servers
+        let r = s
+            .replace(/İ/g, 'i')   // Turkish uppercase I-dot → i
+            .replace(/I/g, 'i')   // Standard I → i (not ı)
+            .replace(/Ş/g, 's')
+            .replace(/Ğ/g, 'g')
+            .replace(/Ü/g, 'u')
+            .replace(/Ö/g, 'o')
+            .replace(/Ç/g, 'c');
+        return r.toLowerCase()
+            .replace(/ı/g, 'i')   // Turkish lowercase dotless i
+            .replace(/ş/g, 's')
+            .replace(/ğ/g, 'g')
+            .replace(/ü/g, 'u')
+            .replace(/ö/g, 'o')
+            .replace(/ç/g, 'c')
+            .trim();
+    };
     return fold(city) in SKI_RESORTS || fold(city) in RESORT_TO_CITY;
 }
 
@@ -347,14 +359,26 @@ export function hasSkiResort(city: string): boolean {
  * If already a city key, returns it as-is.
  */
 export function resolveSkiCityKey(city: string): string {
-    const fold = (s: string) => s.toLowerCase()
-        .replace(/ı/g, 'i').replace(/İ/g, 'i')
-        .replace(/ş/g, 's').replace(/Ş/g, 's')
-        .replace(/ğ/g, 'g').replace(/Ğ/g, 'g')
-        .replace(/ü/g, 'u').replace(/Ü/g, 'u')
-        .replace(/ö/g, 'o').replace(/Ö/g, 'o')
-        .replace(/ç/g, 'c').replace(/Ç/g, 'c')
-        .trim();
+    const fold = (s: string) => {
+        // Replace uppercase Turkish chars BEFORE toLowerCase to avoid
+        // locale-dependent İ→i̇ corruption on Linux production servers
+        let r = s
+            .replace(/İ/g, 'i')   // Turkish uppercase I-dot → i
+            .replace(/I/g, 'i')   // Standard I → i (not ı)
+            .replace(/Ş/g, 's')
+            .replace(/Ğ/g, 'g')
+            .replace(/Ü/g, 'u')
+            .replace(/Ö/g, 'o')
+            .replace(/Ç/g, 'c');
+        return r.toLowerCase()
+            .replace(/ı/g, 'i')   // Turkish lowercase dotless i
+            .replace(/ş/g, 's')
+            .replace(/ğ/g, 'g')
+            .replace(/ü/g, 'u')
+            .replace(/ö/g, 'o')
+            .replace(/ç/g, 'c')
+            .trim();
+    };
     const cityKey = fold(city);
     if (cityKey in SKI_RESORTS) return cityKey;
     return RESORT_TO_CITY[cityKey] || cityKey;
