@@ -88,30 +88,29 @@ function generatePlantingAdvice(
     frostRisk: boolean,
     isRaining: boolean
 ): string {
-
-if (frostRisk) return 'Don riski var. Hassas bitkileri koruma altına edin.';
-if (soilTemp < 5) return 'Toprak çok soğuk. Ekim için baharı bekleyin.';
-if (soilTemp < 10) return 'Toprak serin. Soğuğa dayanıklı türler ekilebilir.';
-if (isRaining) return 'Yağış var. Sulama yapmanıza gerek yok.';
-if (moisture === 'Kuru') return 'Toprak kuru. Ekim öncesi sulama yapın.';
-if (moisture === 'Islak') return 'Toprak fazla nemli. Kurumasını bekleyin.';
-if (soilTemp >= 15 && soilTemp <= 25) return 'Ekim için ideal koşullar. Çoğu tür ekilebilir.';
-if (soilTemp > 30) return 'Toprak çok sıcak. Öğleden sonra sulama yapın.';
-return 'Tarımsal koşullar normal.';
+    if (frostRisk) return 'Don riski var. Hassas bitkileri koruma altına alın.';
+    if (soilTemp < 5) return 'Toprak çok soğuk. Ekim için baharı bekleyin.';
+    if (soilTemp < 10) return 'Toprak serin. Soğuğa dayanıklı türler ekilebilir.';
+    if (isRaining) return 'Yağış var. Sulama yapmanıza gerek yok.';
+    if (moisture === 'Kuru') return 'Toprak kuru. Ekim öncesi sulama yapın.';
+    if (moisture === 'Islak') return 'Toprak fazla nemli. Kurumasını bekleyin.';
+    if (soilTemp >= 15 && soilTemp <= 25) return 'Ekim için ideal koşullar. Çoğu tür ekilebilir.';
+    if (soilTemp > 30) return 'Toprak çok sıcak. Öğleden sonra sulama yapın.';
+    return 'Tarımsal koşullar normal.';
 }
 
 export function isAgricultureRegion(cityName: string): boolean {
-const fold = (s: string) => {
-let r = s
-.replace(/İ/g, 'i').replace(/I/g, 'i').replace(/Ş/g, 's')
-.replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ö/g, 'o')
-.replace(/Ç/g, 'c');
-return r.toLowerCase()
-.replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g')
-.replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c')
-.trim();
-};
-const normCity = fold(cityName);
-const agricultureProvinces = ['Şanlıurfa', 'Diyarbakır', 'Mardin', 'Siirt', 'Batman', 'Şırnak', 'Adıyaman', 'Malatya', 'Elazığ', 'Kilis', 'Konya', 'Aksaray', 'Karaman', 'Çorum', 'Yozgat', 'Kırşehir', 'Niğde', 'Kırıkkale', 'Sivas', 'Amasya', 'Tokat', 'Osmaniye', 'Kahramanmaraş', 'Edirne', 'Tekirdağ', 'Kırklareli', 'Adana', 'Ankara', 'Gaziantep'];
-return agricultureProvinces.some(p => fold(p) === normCity);
+    const fold = (s: string) => {
+        let r = s
+            .replace(/İ/g, 'i').replace(/I/g, 'i').replace(/Ş/g, 's')
+            .replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ö/g, 'o')
+            .replace(/Ç/g, 'c');
+        return r.toLowerCase()
+            .replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g')
+            .replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c')
+            .trim();
+    };
+    const normCity = fold(cityName);
+    const agricultureProvinces = ['Şanlıurfa', 'Diyarbakır', 'Mardin', 'Siirt', 'Batman', 'Şırnak', 'Adıyaman', 'Malatya', 'Elazığ', 'Kilis', 'Konya', 'Aksaray', 'Karaman', 'Çorum', 'Yozgat', 'Kırşehir', 'Niğde', 'Kırıkkale', 'Sivas', 'Amasya', 'Tokat', 'Osmaniye', 'Kahramanmaraş', 'Edirne', 'Tekirdağ', 'Kırklareli', 'Adana', 'Ankara', 'Gaziantep'];
+    return agricultureProvinces.some(p => fold(p) === normCity);
 }
