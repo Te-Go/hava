@@ -4,7 +4,7 @@
  * Calculates tourism comfort index for historical/cultural sites.
  * Provides best time to visit and walking advisories.
  */
-import { toSlug } from './weatherService';
+
 
 
 export interface TourismData {
@@ -90,9 +90,9 @@ const toAscii = (s: string) => {
 };
 
 function getSiteName(cityName: string): string | undefined {
-    const slugifiedCity = toSlug(cityName);
+    const normCity = toAscii(cityName.trim());
     for (const [province, site] of Object.entries(HISTORICAL_SITES)) {
-        if (toSlug(province) === slugifiedCity) return site;
+        if (toAscii(province) === normCity) return site;
     }
     return undefined;
 }
@@ -257,8 +257,8 @@ function generateTourismAdvice(
 }
 
 export function isTourismRegion(cityName: string): boolean {
-    const slugifiedCity = toSlug(cityName);
+    const normCity = toAscii(cityName.trim());
     return Object.keys(HISTORICAL_SITES).some(province => 
-        toSlug(province) === slugifiedCity
+        toAscii(province) === normCity
     );
 }

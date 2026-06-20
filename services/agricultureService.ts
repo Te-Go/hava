@@ -10,7 +10,7 @@
  * - Evapotranspiration (irrigation need)
  * - Frost risk calculation
  */
-import { toSlug } from './weatherService';
+
 
 export interface AgricultureData {
     soilTemp: number;           // °C at 0-7cm depth
@@ -161,16 +161,15 @@ function generatePlantingAdvice(
  * Check if a city is an agricultural region
  */
 export function isAgricultureRegion(cityName: string): boolean {
-    const agricultureProvinces = [
-        'Şanlıurfa', 'Diyarbakır', 'Mardin', 'Siirt', 'Batman', 'Şırnak',
-        'Adıyaman', 'Malatya', 'Elazığ', 'Kilis', 'Konya', 'Aksaray',
-        'Karaman', 'Çorum', 'Yozgat', 'Kırşehir', 'Niğde', 'Kırıkkale',
-        'Sivas', 'Amasya', 'Tokat', 'Osmaniye', 'Kahramanmaraş', 'Edirne',
-        'Tekirdağ', 'Kırklareli', 'Adana', 'Ankara', 'Gaziantep'
-        // Note: Nevşehir excluded - it's a tourism region (Cappadocia)
-    ];
-
-    return agricultureProvinces.some(p =>
-        toSlug(p) === toSlug(cityName)
-    );
+    const fold = (s: string) => s.toLowerCase()
+        .replace(/ı/g, 'i').replace(/İ/g, 'i')
+        .replace(/ş/g, 's').replace(/Ş/g, 's')
+        .replace(/ğ/g, 'g').replace(/Ğ/g, 'g')
+        .replace(/ü/g, 'u').replace(/Ü/g, 'u')
+        .replace(/ö/g, 'o').replace(/Ö/g, 'o')
+        .replace(/ç/g, 'c').replace(/Ç/g, 'c')
+        .trim();
+    const normCity = fold(cityName);
+    const agricultureProvinces = ['Şanlıurfa', 'Diyarbakır', 'Mardin', 'Siirt', 'Batman', 'Şırnak', 'Adıyaman', 'Malatya', 'Elazığ', 'Kilis', 'Konya', 'Aksaray', 'Karaman', 'Çorum', 'Yozgat', 'Kırşehir', 'Niğde', 'Kırıkkale', 'Sivas', 'Amasya', 'Tokat', 'Osmaniye', 'Kahramanmaraş', 'Edirne', 'Tekirdağ', 'Kırklareli', 'Adana', 'Ankara', 'Gaziantep'];
+    return agricultureProvinces.some(p => fold(p) === normCity);
 }

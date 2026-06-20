@@ -890,6 +890,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                 />
               );
             })()}
+            {/* Fix: Balanced skeleton wrapper tree to match layout grid geometry */}
             {loading ? (
               <div className="animate-fadeIn w-full py-6">
                  <HeroSkeleton />
