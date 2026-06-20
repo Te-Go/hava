@@ -44,8 +44,7 @@ import { Icon } from './components/Icons';
 import { IslandPanel } from './islands';
 import { fetchMarineData, isCoastalCity, type MarineData } from './services/marineService';
 import { fetchTrafficData, hasTrafficMonitoring, type TomTomTrafficData } from './services/tomtomTrafficService';
-import { hasSkiResort, resolveSkiCityKey, type SkiData } from './services/skiService';
-import { fetchWeatherUnlockedSki } from './services/weatherUnlockedSkiService';
+import { hasSkiResort, resolveSkiCityKey, calculateSkiConditions, type SkiData } from './services/skiService';
 import { mapOpenMeteoToModel } from './services/weatherService';
 import { findNearestHub } from './services/locationUtils'; // Hub & Spoke Logic
 
@@ -620,7 +619,14 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           } else setMarineData(null);
 
           if (hasSkiResort(citySlug)) {
-             fetchWeatherUnlockedSki(citySlug).then(setSkiData).catch(() => setSkiData(null));
+             const calculatedSki = calculateSkiConditions(
+                citySlug,
+                safeWeatherData.currentTemp,
+                safeWeatherData.rainVolume || 0,
+                safeWeatherData.windSpeed,
+                safeWeatherData.cloudCover || 0
+             );
+             setSkiData(calculatedSki);
           } else setSkiData(null);
 
           if (isAgricultureRegion(citySlug)) {
@@ -667,7 +673,14 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
             } else setMarineData(null);
 
             if (hasSkiResort(citySlug)) {
-               fetchWeatherUnlockedSki(citySlug).then(setSkiData).catch(() => setSkiData(null));
+               const calculatedSki = calculateSkiConditions(
+                  citySlug,
+                  newWeatherData.currentTemp,
+                  newWeatherData.rainVolume || 0,
+                  newWeatherData.windSpeed,
+                  newWeatherData.cloudCover || 0
+               );
+               setSkiData(calculatedSki);
             } else setSkiData(null);
 
             if (isAgricultureRegion(citySlug)) {

@@ -23,12 +23,7 @@ class TedderAPIProxy {
             'permission_callback' => '__return_true'
         ));
 
-        // Ski Route (WeatherUnlocked) - 06:30 / 12:30 cache
-        register_rest_route( 'sinan/v1', '/ski', array(
-            'methods'  => 'GET',
-            'callback' => array( $this, 'proxy_weatherunlocked_ski' ),
-            'permission_callback' => '__return_true'
-        ));
+
 
         // Finance Route (KeyCollect) - 2 minute cache
         register_rest_route( 'sinan/v1', '/finance', array(
@@ -362,100 +357,7 @@ class TedderAPIProxy {
     }
 
     /**
-     * Smart Time-Boundary Cache Evaluation for Ski Resorts
-     * Flushes data if 06:30 or 12:30 (Europe/Istanbul time) has been crossed since the last fetch.
-     */
-    private function is_tedder_ski_cache_expired( $last_fetch_timestamp ) {
-        if ( ! $last_fetch_timestamp ) {
-            return true;
-        }
 
-        // Force Turkish Local Time
-        $tz = new DateTimeZone( 'Europe/Istanbul' );
-        $now = new DateTime( 'now', $tz );
-        $last_fetch = new DateTime( '@' . $last_fetch_timestamp );
-        $last_fetch->setTimezone( $tz );
-
-        // Define today's strict update boundaries
-        $morning_update = clone $now;
-        $morning_update->setTime( 6, 30, 0 );
-
-        $afternoon_update = clone $now;
-        $afternoon_update->setTime( 12, 30, 0 );
-
-        // Cross 06:30 boundary
-        if ( $now >= $morning_update && $last_fetch < $morning_update ) {
-            return true;
-        }
-
-        // Cross 12:30 boundary
-        if ( $now >= $afternoon_update && $last_fetch < $afternoon_update ) {
-            return true;
-        }
-
-        // Standard 6-hour max limit
-        if ( ( $now->getTimestamp() - $last_fetch_timestamp ) > ( 6 * HOUR_IN_SECONDS ) ) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Proxy WeatherUnlocked Ski
-     */
-    public function proxy_weatherunlocked_ski( $request ) {
-        $resort_id = sanitize_text_field( $request->get_param( 'id' ) );
-        if ( ! $resort_id ) {
-            return new WP_Error( 'missing_params', 'Resort ID required', array( 'status' => 400 ) );
-        }
-
-        $app_id  = get_option( 'tedder_wu_app_id' );
-        $app_key = get_option( 'tedder_wu_app_key' );
-
-        if ( empty( $app_id ) ) {
-            $app_id = '904fe6ce'; // Fallback app ID
-        }
-        if ( empty( $app_key ) ) {
-            $app_key = '6034c52f1991fd234505fd851f309fe7'; // Fallback app key
-        }
-
-        $cache_key = 'tedder_ski_data_' . md5($resort_id);
-        $time_key  = 'tedder_ski_time_' . md5($resort_id);
-
-        $cached_data = get_transient( $cache_key );
-        $last_fetch  = get_option( $time_key );
-
-        if ( ! $cached_data || $this->is_tedder_ski_cache_expired( $last_fetch ) ) {
-            $url = "https://api.weatherunlocked.com/api/resortforecast/{$resort_id}?app_id={$app_id}&app_key={$app_key}";
-            $response = wp_remote_get( $url, array( 'timeout' => 3 ) );
-
-            if ( is_wp_error( $response ) ) {
-                // Cache error state for 5 minutes to avoid server hangs on subsequent loads
-                $error_data = array( 'error' => true, 'message' => $response->get_error_message() );
-                set_transient( $cache_key, json_encode( $error_data ), 300 );
-                update_option( $time_key, time() );
-                $cached_data = json_encode( $error_data );
-            } else {
-                $body = wp_remote_retrieve_body( $response );
-                $data = json_decode( $body, true );
-                if ( isset( $data['forecast'] ) ) {
-                    set_transient( $cache_key, $body, 6 * HOUR_IN_SECONDS );
-                    update_option( $time_key, time() );
-                    $cached_data = $body;
-                } else {
-                    $error_data = array( 'error' => true, 'message' => 'Invalid API response' );
-                    set_transient( $cache_key, json_encode( $error_data ), 300 );
-                    update_option( $time_key, time() );
-                    $cached_data = json_encode( $error_data );
-                }
-            }
-        }
-
-        $response = new WP_REST_Response( json_decode( $cached_data, true ) );
-        $response->set_status( 200 );
-        return $response;
-    }
 
     /**
      * Proxy KeyCollect Finance

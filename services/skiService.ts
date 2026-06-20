@@ -126,7 +126,8 @@ export function calculateSkiConditions(
     cloudCover: number,     // 0-100%
     snowfallMm: number = 0  // If available from API
 ): SkiData | null {
-    const resort = SKI_RESORTS[cityKey];
+    const resolvedKey = resolveSkiCityKey(cityKey);
+    const resort = SKI_RESORTS[resolvedKey];
     if (!resort) return null;
 
     // Check if in season
