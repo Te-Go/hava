@@ -121,7 +121,8 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
 
         if (!mapRef.current && mapContainerRef.current) {
             import('leaflet').then((L) => {
-                if (!isMounted) return;
+                // Guard against asynchronous resolution if the component unmounted early
+                if (!isMounted || mapRef.current) return;
 
                 // Determine active page context
                 const path = window.location.pathname;
@@ -176,8 +177,14 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
             });
         }
 
+        // Structural Cleanup: Destroys map instance on unmount to prevent empty dead DOM nodes on remount
         return () => {
             isMounted = false;
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+            setMapReady(false);
         };
     }, []);
 
