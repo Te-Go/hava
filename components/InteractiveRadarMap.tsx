@@ -148,7 +148,8 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
 
                 // Standard OpenStreetMap track (renders local Turkish naming conventions natively)
                 tileLayerRef.current = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 18
+                    maxZoom: 18,
+                    attribution: '&copy; OpenStreetMap contributors'
                 }).addTo(mapRef.current);
 
                 // Restrict bounds to Turkey geometry
@@ -184,7 +185,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
         };
     }, []);
 
-    // 5. Handle safe single-page routing re-centering without map container crashes
+    // 4. Handle safe single-page routing re-centering without map container crashes
     useEffect(() => {
         if (mapRef.current && mapReady) {
             const path = window.location.pathname;
@@ -205,7 +206,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
         }
     }, [weatherData?.coord, mapReady]);
 
-    // 6. Update overlays (precipitation, temperature badges, wind vectors) on configuration shifts
+    // 5. Update overlays (precipitation, temperature badges, wind vectors) on configuration shifts
     useEffect(() => {
         const updateLayers = async () => {
             const map = mapRef.current;
@@ -310,7 +311,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
     }, [activeLayer, cityWeatherData, radarConfig, mapReady]);
 
     return (
-        <div className="w-full relative rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-slate-950/40 backdrop-blur-md">
+        <div className="w-full relative rounded-xl overflow-hidden shadow-lg border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900 transition-colors duration-300">
             {/* FUTURISTIC GLASSMORPHISM SELECTOR OVERLAY */}
             <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center pointer-events-none">
                 <div className="flex bg-slate-950/80 dark:bg-slate-900/90 backdrop-blur-md rounded-xl p-1.5 border border-white/10 shadow-lg pointer-events-auto gap-1">

@@ -15,33 +15,12 @@ interface Props {
     lastUpdated: number;
 }
 
-/**
- * Ski Conditions Widget (Mountain Cities Only)
- * Shows snow depth, lift status, and avalanche risk
- * Fixed Slot Contract: 240px height
- */
 const SkiConditions: React.FC<Props> = ({ data, narrative, lastUpdated }) => {
     const avalancheConfig: Record<string, { color: string; bgColor: string; darkColor: string; darkBgColor: string; label: string }> = {
-        low: {
-            color: 'text-green-600', bgColor: 'bg-green-50',
-            darkColor: 'text-green-400', darkBgColor: 'dark:bg-green-500/20',
-            label: 'Düşük'
-        },
-        moderate: {
-            color: 'text-amber-600', bgColor: 'bg-amber-50',
-            darkColor: 'text-yellow-400', darkBgColor: 'dark:bg-yellow-500/20',
-            label: 'Orta'
-        },
-        considerable: {
-            color: 'text-orange-600', bgColor: 'bg-orange-50',
-            darkColor: 'text-orange-400', darkBgColor: 'dark:bg-orange-500/20',
-            label: 'Yüksek'
-        },
-        high: {
-            color: 'text-red-600', bgColor: 'bg-red-50',
-            darkColor: 'text-red-400', darkBgColor: 'dark:bg-red-500/20',
-            label: 'Çok Yüksek'
-        },
+        low: { color: 'text-green-600', bgColor: 'bg-green-50', darkColor: 'text-green-400', darkBgColor: 'dark:bg-green-500/20', label: 'Düşük' },
+        moderate: { color: 'text-amber-600', bgColor: 'bg-amber-50', darkColor: 'text-yellow-400', darkBgColor: 'dark:bg-yellow-500/20', label: 'Orta' },
+        considerable: { color: 'text-orange-600', bgColor: 'bg-orange-50', darkColor: 'text-orange-400', darkBgColor: 'dark:bg-orange-500/20', label: 'Yüksek' },
+        high: { color: 'text-red-600', bgColor: 'bg-red-50', darkColor: 'text-red-400', darkBgColor: 'dark:bg-red-500/20', label: 'Çok Yüksek' },
     };
 
     const avalanche = avalancheConfig[data?.avalancheRisk || 'low'];
@@ -70,15 +49,13 @@ const SkiConditions: React.FC<Props> = ({ data, narrative, lastUpdated }) => {
                 <p className="line-clamp-2">{narrative || 'Kayak verisi yükleniyor...'}</p>
             </div>
 
-            {/* Stats Grid: 120px */}
+            {/* Stats Grid: 110px */}
             <div className="grid grid-cols-3 h-[110px] items-center px-2">
-                {/* Snow Depth */}
                 <div className="flex flex-col items-center justify-center text-slate-700 dark:text-white">
                     <div className="text-3xl font-bold">{data?.snowDepth ?? '--'}</div>
                     <div className="text-xs text-slate-500 dark:text-white/70">cm kar</div>
                 </div>
 
-                {/* Lifts Status */}
                 <div className="flex flex-col items-center justify-center text-slate-700 dark:text-white border-x border-slate-100 dark:border-white/10 h-16">
                     <div className="text-3xl font-bold flex items-baseline gap-0.5">
                         <span className="text-green-600 dark:text-green-400">{data?.liftsOpen ?? '-'}</span>
@@ -87,7 +64,6 @@ const SkiConditions: React.FC<Props> = ({ data, narrative, lastUpdated }) => {
                     <div className="text-xs text-slate-500 dark:text-white/70">Açık Pist</div>
                 </div>
 
-                {/* Avalanche Risk */}
                 <div className="flex flex-col items-center justify-center">
                     <div className={`px-3 py-1 rounded-lg ${avalanche.bgColor} ${avalanche.darkBgColor}`}>
                         <span className={`text-lg font-bold ${avalanche.color} ${avalanche.darkColor}`}>
