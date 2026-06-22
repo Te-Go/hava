@@ -1,43 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import GlassCard from './GlassCard';
 import { Icon } from './Icons';
 
 // Enforce Leaflet CSS directly into this bundle slot
 import 'leaflet/dist/leaflet.css';
-
-// 1. PRE-RENDER TRAP LOCK (Outside React Mount Lifecycle)
-const getInitialMapState = () => {
-    let lat = 39.0000;
-    let lon = 35.5000;
-    let zoom = 6; // Default to Zoom Level 6 (macro overview of Turkey)
-
-    if (typeof window !== 'undefined') {
-        const path = window.location.pathname;
-        const segments = path.split('/').filter(Boolean);
-        
-        // Check if a specific city page is active (e.g. /hava-durumu/istanbul)
-        const isCityPage = segments.length >= 2 && 
-                           segments[0] === 'hava-durumu' && 
-                           !['yarin', '15-gunluk', 'hafta-sonu', 'analiz', 'haberler', 'iletisim', 'hakkimizda', 'gizlilik-politikasi', 'kullanim-kosullari', 'wp-admin', 'wp-json', 'sitemap', 'feed', 'rss', 'konum-ara', 'island-demo', 'deniz-suyu-sicakligi', 'sehirler'].includes(segments[1]);
-
-        const payload = (window as any).SinanWeatherPayload;
-        if (payload && isCityPage) {
-            const payloadLat = payload.weatherData?.latitude;
-            const payloadLon = payload.weatherData?.longitude;
-            if (typeof payloadLat === 'number') lat = payloadLat;
-            if (typeof payloadLon === 'number') lon = payloadLon;
-            zoom = 8; // Zoom Level 8 for active city page
-        } else {
-            // Homepage / macro overview fallback
-            lat = 39.0000;
-            lon = 35.5000;
-            zoom = 6;
-        }
-    }
-    return { center: [lat, lon] as [number, number], zoom };
-};
-
-const initialMapState = getInitialMapState();
 
 const MAJOR_CITIES = [
     { name: 'İstanbul', lat: 41.0082, lon: 28.9784, key: 'istanbul' },
@@ -66,20 +31,21 @@ type LayerType = 'radar' | 'temp' | 'wind';
 const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, isDarkMode = true }) => {
     // SSR guard
     if (typeof window === 'undefined') {
-        return <div className="h-[350px] md:h-[400px] lg:h-[450px] bg-slate-100 rounded-xl animate-pulse" />;
+        return <div className="w-full h-[350px] md:h-[400px] lg:h-[450px] bg-slate-100 rounded-xl animate-pulse" />;
     }
 
     const [activeLayer, setActiveLayer] = useState<LayerType>('radar');
     const [cityWeatherData, setCityWeatherData] = useState<any[]>([]);
     const [radarConfig, setRadarConfig] = useState<{ host: string; path: string } | null>(null);
+    const [mapReady, setMapReady] = useState(false); // Lifecycle safety state
 
-    const mapRef = useRef<HTMLDivElement>(null);
-    const mapInstanceRef = useRef<any>(null);
+    const mapRef = useRef<any>(null); // Leaflet map instance stored in persistent ref
+    const mapContainerRef = useRef<HTMLDivElement>(null); // Map DOM container
     const tileLayerRef = useRef<any>(null);
     const radarOverlayRef = useRef<any>(null);
     const markersGroupRef = useRef<any>(null);
 
-    // 2. Fetch RainViewer configuration via backend rest proxy (avoiding CSP connect block)
+    // 1. Fetch RainViewer configuration via backend rest proxy (avoiding CSP connect block)
     useEffect(() => {
         const fetchRadarConfig = async () => {
             try {
@@ -99,7 +65,6 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                 }
             } catch (err) {
                 console.error('[Radar Map] Config fetch failed, falling back:', err);
-                // Statically fallback to general RainViewer cache structure if proxy drops
                 setRadarConfig({
                     host: 'https://tilecache.rainviewer.com',
                     path: '/v2/radar/nowcast'
@@ -110,7 +75,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
         fetchRadarConfig();
     }, []);
 
-    // 3. Fetch major cities weather for vector overlays
+    // 2. Fetch major cities weather for vector overlays
     useEffect(() => {
         const fetchCitiesWeather = async () => {
             try {
@@ -131,7 +96,6 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                     }));
                     setCityWeatherData(mapped);
                 } else if (data && typeof data === 'object') {
-                    // Open-Meteo returns array if multiple lat/lons queried, check if it's array
                     const mapped = MAJOR_CITIES.map((city, index) => {
                         const cityItem = Array.isArray(data) ? data[index] : (data[index] || data);
                         return {
@@ -151,108 +115,124 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
         fetchCitiesWeather();
     }, []);
 
-    // 4. INSULATE WINDOW CALL FROM SSR (contained fully inside client-side useEffect)
+    // 3. SAFE SPA LIFE-CYCLE IMPLEMENTATION VIA useRef
     useEffect(() => {
         let isMounted = true;
 
-        const initLeaflet = async () => {
-            if (!mapRef.current || mapInstanceRef.current) return;
+        if (!mapRef.current && mapContainerRef.current) {
+            import('leaflet').then((L) => {
+                if (!isMounted) return;
 
-            const L = await import('leaflet');
-            if (!isMounted) return;
+                // Determine active page context
+                const path = window.location.pathname;
+                const segments = path.split('/').filter(Boolean);
+                const isCityPage = segments.length >= 2 && 
+                                   segments[0] === 'hava-durumu' && 
+                                   !['yarin', '15-gunluk', 'hafta-sonu', 'analiz', 'haberler', 'iletisim', 'hakkimizda', 'gizlilik-politikasi', 'kullanim-kosullari', 'wp-admin', 'wp-json', 'sitemap', 'feed', 'rss', 'konum-ara', 'island-demo', 'deniz-suyu-sicakligi', 'sehirler'].includes(segments[1]);
 
-            // Initialize Map
-            const map = L.map(mapRef.current, {
-                center: initialMapState.center,
-                zoom: initialMapState.zoom,
-                minZoom: 5,
-                maxZoom: 10,
-                zoomControl: false, // Custom position control
-                scrollWheelZoom: false,
-                attributionControl: false
+                // Extract coordinates from injected global payload context
+                const payload = (window as any).SinanWeatherPayload;
+                const initialLat = isCityPage && payload?.weatherData?.latitude ? payload.weatherData.latitude : 39.0000;
+                const initialLon = isCityPage && payload?.weatherData?.longitude ? payload.weatherData.longitude : 35.5000;
+                const initialZoom = isCityPage ? 8 : 6;
+
+                // Initialize Leaflet Map instance ONLY ONCE
+                mapRef.current = L.map(mapContainerRef.current!, {
+                    minZoom: 5,
+                    maxZoom: 10,
+                    zoomControl: false,
+                    scrollWheelZoom: false,
+                    attributionControl: false
+                }).setView([initialLat, initialLon], initialZoom);
+
+                // Set theme-aware tile layer (CartoDB voyager for light, dark_all for dark mode)
+                const tileUrl = isDarkMode 
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+                tileLayerRef.current = L.tileLayer(tileUrl, {
+                    maxZoom: 19
+                }).addTo(mapRef.current);
+
+                // Restrict bounds to Turkey geometry
+                const southWest = L.latLng(34.0, 24.0);
+                const northEast = L.latLng(43.0, 46.0);
+                const bounds = L.latLngBounds(southWest, northEast);
+                mapRef.current.setMaxBounds(bounds);
+
+                // Add Zoom Control at bottom right
+                L.control.zoom({ position: 'bottomright' }).addTo(mapRef.current);
+
+                markersGroupRef.current = L.layerGroup().addTo(mapRef.current);
+
+                setMapReady(true); // Signal that map is ready to receive overlays
+
+                // Force layout recalculation to clear tile display issues
+                setTimeout(() => {
+                    if (mapRef.current) {
+                        mapRef.current.invalidateSize();
+                    }
+                }, 200);
             });
-
-            // Base Map Layer (OpenStreetMap)
-            const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19
-            }).addTo(map);
-
-            // Restrict bounds to Turkey geometry
-            const southWest = L.latLng(34.0, 24.0);
-            const northEast = L.latLng(43.0, 46.0);
-            const bounds = L.latLngBounds(southWest, northEast);
-            map.setMaxBounds(bounds);
-
-            // Add Zoom Control at bottom right
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-            mapInstanceRef.current = map;
-            tileLayerRef.current = tileLayer;
-            markersGroupRef.current = L.layerGroup().addTo(map);
-
-            // Force reflow layout check to clear grey tiles
-            setTimeout(() => {
-                if (mapInstanceRef.current) {
-                    mapInstanceRef.current.invalidateSize();
-                }
-            }, 200);
-        };
-
-        initLeaflet();
+        }
 
         return () => {
             isMounted = false;
-            if (mapInstanceRef.current) {
-                mapInstanceRef.current.remove();
-                mapInstanceRef.current = null;
-            }
         };
     }, []);
 
-    // 4.5. Dynamic center and zoom alignment on weatherData updates (SPA Navigation Support)
+    // 4. Update tile layer styles dynamically on dark mode state changes
     useEffect(() => {
-        const map = mapInstanceRef.current;
-        if (!map) return;
+        const map = mapRef.current;
+        if (!map || !tileLayerRef.current || !mapReady) return;
 
-        const path = window.location.pathname;
-        const segments = path.split('/').filter(Boolean);
+        const newTileUrl = isDarkMode 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
         
-        const isCityPage = segments.length >= 2 && 
-                           segments[0] === 'hava-durumu' && 
-                           !['yarin', '15-gunluk', 'hafta-sonu', 'analiz', 'haberler', 'iletisim', 'hakkimizda', 'gizlilik-politikasi', 'kullanim-kosullari', 'wp-admin', 'wp-json', 'sitemap', 'feed', 'rss', 'konum-ara', 'island-demo', 'deniz-suyu-sicakligi', 'sehirler'].includes(segments[1]);
+        tileLayerRef.current.setUrl(newTileUrl);
+    }, [isDarkMode, mapReady]);
 
-        if (isCityPage && weatherData?.coord) {
-            const lat = weatherData.coord.lat;
-            const lon = weatherData.coord.lon;
-            if (typeof lat === 'number' && typeof lon === 'number') {
-                map.setView([lat, lon], 8);
+    // 5. Handle safe single-page routing re-centering without map container crashes
+    useEffect(() => {
+        if (mapRef.current && mapReady) {
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(Boolean);
+            const isCityPage = segments.length >= 2 && 
+                               segments[0] === 'hava-durumu' && 
+                               !['yarin', '15-gunluk', 'hafta-sonu', 'analiz', 'haberler', 'iletisim', 'hakkimizda', 'gizlilik-politikasi', 'kullanim-kosullari', 'wp-admin', 'wp-json', 'sitemap', 'feed', 'rss', 'konum-ara', 'island-demo', 'deniz-suyu-sicakligi', 'sehirler'].includes(segments[1]);
+
+            if (isCityPage && weatherData?.coord) {
+                const { lat, lon } = weatherData.coord;
+                if (typeof lat === 'number' && typeof lon === 'number') {
+                    mapRef.current.setView([lat, lon], 8, { animate: true });
+                }
+            } else {
+                // Return to macro Turkey overview when on generic views
+                mapRef.current.setView([39.0000, 35.5000], 6, { animate: true });
             }
-        } else {
-            // Homepage / macro overview fallback
-            map.setView([39.0000, 35.5000], 6);
         }
-    }, [weatherData]);
+    }, [weatherData?.coord, mapReady]);
 
-    // 5. Update Map Layer and Vectors when options change
+    // 6. Update overlays (precipitation, temperature badges, wind vectors) on configuration shifts
     useEffect(() => {
         const updateLayers = async () => {
-            const map = mapInstanceRef.current;
-            if (!map) return;
+            const map = mapRef.current;
+            if (!map || !mapReady) return;
 
             const L = await import('leaflet');
 
-            // A. Clean up old radar overlays
+            // Clean up old radar overlays
             if (radarOverlayRef.current) {
                 map.removeLayer(radarOverlayRef.current);
                 radarOverlayRef.current = null;
             }
 
-            // B. Clean up old markers
+            // Clean up old markers
             if (markersGroupRef.current) {
                 markersGroupRef.current.clearLayers();
             }
 
-            // C. Deploy the active layer mapping (Law 3 Compliance Guard)
             const safeLayer = activeLayer || 'radar';
 
             if (safeLayer === 'radar') {
@@ -336,11 +316,11 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
         };
 
         updateLayers();
-    }, [activeLayer, cityWeatherData, radarConfig]);
+    }, [activeLayer, cityWeatherData, radarConfig, mapReady]);
 
     return (
-        <GlassCard className="flex flex-col h-full relative overflow-hidden" noPadding>
-            {/* 6. FUTURISTIC GLASSMORPHISM SELECTOR OVERLAY */}
+        <div className="w-full relative rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-slate-950/40 backdrop-blur-md">
+            {/* FUTURISTIC GLASSMORPHISM SELECTOR OVERLAY */}
             <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center pointer-events-none">
                 <div className="flex bg-slate-950/80 dark:bg-slate-900/90 backdrop-blur-md rounded-xl p-1.5 border border-white/10 shadow-lg pointer-events-auto gap-1">
                     <button
@@ -384,12 +364,9 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                 </div>
             </div>
 
-            {/* Map Container - Theme Aware dark filter */}
-            <div className={`relative w-full h-[350px] md:h-[400px] lg:h-[450px] z-0 ${isDarkMode ? 'dark-map' : ''}`}>
+            {/* Map Container */}
+            <div className="relative w-full h-[350px] md:h-[400px] lg:h-[450px] z-0">
                 <style>{`
-                    .dark-map .leaflet-tile-container {
-                        filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) !important;
-                    }
                     .leaflet-popup-content-wrapper {
                         background: rgba(30, 41, 59, 0.95) !important;
                         color: #f8fafc !important;
@@ -419,9 +396,9 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                         background-color: rgba(51, 65, 85, 0.9) !important;
                     }
                 `}</style>
-                <div ref={mapRef} className="w-full h-full" />
+                <div ref={mapContainerRef} className="w-full h-full" />
             </div>
-        </GlassCard>
+        </div>
     );
 };
 
