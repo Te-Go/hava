@@ -48,7 +48,7 @@ const SkiConditions: React.FC<Props> = ({ data, narrative, lastUpdated }) => {
 
     return (
         <div
-            className="sinan-ski-widget bg-white dark:bg-gradient-to-r dark:from-slate-700 dark:to-slate-800 rounded-xl overflow-hidden shadow-sm dark:shadow-lg border border-slate-100 dark:border-none"
+            className="sinan-ski-widget bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-xl overflow-hidden shadow-sm dark:shadow-lg transition-colors duration-300"
             style={{ minHeight: 'var(--sinan-slot-height, 240px)' }}
         >
             {/* Header: 50px */}
@@ -66,7 +66,7 @@ const SkiConditions: React.FC<Props> = ({ data, narrative, lastUpdated }) => {
             </div>
 
             {/* Narrative: 50px */}
-            <div className="h-[50px] px-4 py-2 bg-slate-50 dark:bg-white/5 text-sm text-slate-600 dark:text-white/90 overflow-hidden flex items-center border-l-4 border-blue-400 mx-4 mt-3 mb-1 rounded">
+            <div className="h-[50px] px-4 py-2 bg-slate-50 dark:bg-slate-900/40 text-sm text-slate-600 dark:text-slate-300 overflow-hidden flex items-center border-l-4 border-blue-400 mx-4 mt-3 mb-1 rounded">
                 <p className="line-clamp-2">{narrative || 'Kayak verisi yükleniyor...'}</p>
             </div>
 

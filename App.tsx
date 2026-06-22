@@ -133,6 +133,13 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
 
   // BULLETPROOF HYDRATION LOGIC
   const getInitialState = (): { city: string; view: ViewState['type']; parentCity?: string } => {
+    // Instantly isolate bare root layouts to prevent late-hydration compression loops
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path === '/' || path === '/hava-durumu' || path === '/hava-durumu/') {
+        return { city: 'istanbul', view: 'home' };
+      }
+    }
 
     // ⛔️ PRIORITY 1: Server Injection (The "Truth")
     // If PHP (Asset Loader) injected the data object, use it.

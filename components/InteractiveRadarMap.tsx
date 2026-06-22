@@ -137,22 +137,18 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                 const initialLon = isCityPage && payload?.weatherData?.longitude ? payload.weatherData.longitude : 35.5000;
                 const initialZoom = isCityPage ? 8 : 6;
 
-                // Initialize Leaflet Map instance ONLY ONCE
+                // Initialize Leaflet Map instance ONLY ONCE with maxZoom: 18 and minZoom: 4
                 mapRef.current = L.map(mapContainerRef.current!, {
-                    minZoom: 5,
-                    maxZoom: 10,
+                    minZoom: 4,
+                    maxZoom: 18,
                     zoomControl: false,
                     scrollWheelZoom: false,
                     attributionControl: false
                 }).setView([initialLat, initialLon], initialZoom);
 
-                // Set theme-aware tile layer (CartoDB voyager for light, dark_all for dark mode)
-                const tileUrl = isDarkMode 
-                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-
-                tileLayerRef.current = L.tileLayer(tileUrl, {
-                    maxZoom: 19
+                // Standard OpenStreetMap track (renders local Turkish naming conventions natively)
+                tileLayerRef.current = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18
                 }).addTo(mapRef.current);
 
                 // Restrict bounds to Turkey geometry
@@ -187,18 +183,6 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
             setMapReady(false);
         };
     }, []);
-
-    // 4. Update tile layer styles dynamically on dark mode state changes
-    useEffect(() => {
-        const map = mapRef.current;
-        if (!map || !tileLayerRef.current || !mapReady) return;
-
-        const newTileUrl = isDarkMode 
-            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-            : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-        
-        tileLayerRef.current.setUrl(newTileUrl);
-    }, [isDarkMode, mapReady]);
 
     // 5. Handle safe single-page routing re-centering without map container crashes
     useEffect(() => {
@@ -371,9 +355,12 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                 </div>
             </div>
 
-            {/* Map Container */}
-            <div className="relative w-full h-[350px] md:h-[400px] lg:h-[450px] z-0">
+            {/* Map Container - Theme Aware dark filter */}
+            <div className={`relative w-full h-[350px] md:h-[400px] lg:h-[450px] z-0 ${isDarkMode ? 'dark-map' : ''}`}>
                 <style>{`
+                    .dark-map .leaflet-tile-container {
+                        filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) !important;
+                    }
                     .leaflet-popup-content-wrapper {
                         background: rgba(30, 41, 59, 0.95) !important;
                         color: #f8fafc !important;
