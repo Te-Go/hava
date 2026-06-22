@@ -4,18 +4,16 @@ import { Skeleton } from '../ui/skeleton';
 
 export default function RadarSkeleton() {
   return (
-    <GlassCard className="h-full flex flex-col justify-between">
-      <Skeleton className="w-48 h-6 mb-4" />
-      <div className="flex flex-col gap-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-           <div key={i} className="flex gap-4 items-center">
-             <Skeleton className="w-20 h-16 rounded-lg" />
-             <div className="flex flex-col gap-2 w-full">
-                <Skeleton className="w-full h-4" />
-                <Skeleton className="w-2/3 h-4" />
-             </div>
-           </div>
-        ))}
+    <GlassCard className="flex flex-col h-full relative overflow-hidden" noPadding>
+      {/* Skeleton header mimicking the map controls */}
+      <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center pointer-events-none">
+        <Skeleton className="w-48 h-8 rounded-xl bg-slate-200/50 dark:bg-slate-800/50" />
+        <Skeleton className="hidden sm:block w-36 h-8 rounded-xl bg-slate-200/50 dark:bg-slate-800/50" />
+      </div>
+
+      {/* Map area skeleton */}
+      <div className="w-full h-[350px] md:h-[400px] lg:h-[450px]">
+        <Skeleton className="w-full h-full rounded-xl bg-slate-100/50 dark:bg-slate-850/50" />
       </div>
     </GlassCard>
   );

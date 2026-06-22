@@ -31,6 +31,13 @@ class TedderAPIProxy {
             'callback' => array( $this, 'proxy_keycollect_finance' ),
             'permission_callback' => '__return_true'
         ));
+
+        // Radar Route (RainViewer Proxy) - 5 minute cache
+        register_rest_route( 'sinan/v1', '/radar', array(
+            'methods'  => 'GET',
+            'callback' => array( $this, 'proxy_rainviewer_radar' ),
+            'permission_callback' => '__return_true'
+        ));
     }
 
     /**
@@ -415,6 +422,37 @@ class TedderAPIProxy {
             // High-velocity 2-minute cache per Dev Leader's instruction
             set_transient( $cache_key, json_encode($formatted_data), 2 * MINUTE_IN_SECONDS );
             $cached_data = json_encode($formatted_data);
+        }
+
+        $response = new WP_REST_Response( json_decode( $cached_data, true ) );
+        $response->set_status( 200 );
+        return $response;
+    }
+
+    /**
+     * Proxy RainViewer Radar Configuration
+     */
+    public function proxy_rainviewer_radar( $request ) {
+        $cache_key = 'tedder_radar_maps';
+        $cached_data = get_transient( $cache_key );
+
+        if ( false === $cached_data ) {
+            $url = "https://api.rainviewer.com/public/weather-maps.json";
+            $response = wp_remote_get( $url, array( 'timeout' => 5 ) );
+
+            if ( is_wp_error( $response ) ) {
+                return $response;
+            }
+
+            $body = wp_remote_retrieve_body( $response );
+            $data = json_decode( $body, true );
+            
+            if ( isset( $data['host'] ) ) {
+                set_transient( $cache_key, $body, 5 * MINUTE_IN_SECONDS );
+                $cached_data = $body;
+            } else {
+                return new WP_Error( 'radar_error', 'Invalid response from RainViewer API', array( 'status' => 502 ) );
+            }
         }
 
         $response = new WP_REST_Response( json_decode( $cached_data, true ) );

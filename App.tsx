@@ -29,7 +29,7 @@ import NetworkRibbon from './components/NetworkRibbon';
 import SEOBreadcrumb from './components/SEOBreadcrumb';
 
 // Lazy Load Heavy Components (Route Splitting & Component Splitting)
-const RadarNews = React.lazy(() => import('./components/RadarNews'));
+const InteractiveRadarMap = React.lazy(() => import('./components/InteractiveRadarMap'));
 const HistoricalChart = React.lazy(() => import('./components/HistoricalChart'));
 const NewsSection = React.lazy(() => import('./components/NewsSection'));
 const LocationSearchPage = React.lazy(() => import('./components/LocationSearchPage'));
@@ -970,11 +970,10 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                       <LifestyleRail data={displayData} />
                     </div>
                     <div className="w-full md:w-1/2">
-                      <Suspense fallback={<div className="h-[300px] bg-white/50 dark:bg-slate-800/50 rounded-xl animate-pulse" />}>
-                        <RadarNews
-                          articles={articles}
+                      <Suspense fallback={<div className="h-[350px] md:h-[400px] lg:h-[450px] bg-white/50 dark:bg-slate-800/50 rounded-xl animate-pulse" />}>
+                        <InteractiveRadarMap
                           weatherData={displayData}
-                          compact={true}
+                          isDarkMode={isDarkMode}
                         />
                       </Suspense>
                     </div>
