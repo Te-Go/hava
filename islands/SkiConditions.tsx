@@ -30,7 +30,6 @@ const SkiConditions: React.FC<Props> = ({ data, narrative, lastUpdated }) => {
             className="sinan-ski-widget bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-xl overflow-hidden shadow-sm dark:shadow-lg transition-colors duration-300"
             style={{ minHeight: 'var(--sinan-slot-height, 240px)' }}
         >
-            {/* Header: 50px */}
             <div className="h-[50px] px-4 flex items-center justify-between border-b border-slate-100 dark:border-white/5">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-blue-50 dark:bg-white/10 text-blue-500 dark:text-white rounded-lg flex items-center justify-center">
@@ -44,12 +43,10 @@ const SkiConditions: React.FC<Props> = ({ data, narrative, lastUpdated }) => {
                 <VitalityPulse lastUpdated={lastUpdated} />
             </div>
 
-            {/* Narrative: 50px */}
             <div className="h-[50px] px-4 py-2 bg-slate-50 dark:bg-slate-900/40 text-sm text-slate-600 dark:text-slate-300 overflow-hidden flex items-center border-l-4 border-blue-400 mx-4 mt-3 mb-1 rounded">
                 <p className="line-clamp-2">{narrative || 'Kayak verisi yükleniyor...'}</p>
             </div>
 
-            {/* Stats Grid: 110px */}
             <div className="grid grid-cols-3 h-[110px] items-center px-2">
                 <div className="flex flex-col items-center justify-center text-slate-700 dark:text-white">
                     <div className="text-3xl font-bold">{data?.snowDepth ?? '--'}</div>
@@ -74,7 +71,6 @@ const SkiConditions: React.FC<Props> = ({ data, narrative, lastUpdated }) => {
                 </div>
             </div>
 
-            {/* Bottom Indicator */}
             <div className="h-[20px] flex items-center justify-center border-t border-slate-50 dark:border-white/5">
                 <div className="flex items-center gap-1 text-xs text-slate-400">
                     <span className="w-2 h-2 rounded-full bg-green-500"></span>

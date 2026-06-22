@@ -610,7 +610,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       try {
         const citySlug = toSlug(currentCity);
         const globalPayload = (window as any).SinanWeatherPayload;
-        if (globalPayload && globalPayload.weatherData && toSlug(globalPayload.city) === citySlug) {
+        if (globalPayload && globalPayload.weatherData && globalPayload.weatherData.hourly && toSlug(globalPayload.city) === citySlug) {
           const safeWeatherData = await mapOpenMeteoToModel(citySlug, globalPayload.weatherData);
           setWeatherData(safeWeatherData);
           
