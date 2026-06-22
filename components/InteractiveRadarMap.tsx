@@ -225,9 +225,15 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ articles = []
                 const currentLat = weatherData.coord.lat;
                 const currentLon = weatherData.coord.lon;
                 const exists = activeCitiesList.some(c => Math.abs(c.lat - currentLat) < 0.01 && Math.abs(c.lon - currentLon) < 0.01);
+                
                 if (!exists && currentLat && currentLon) {
+                    // Safely isolate the district name slug from segment index [2] if it exists
+                    const rawLocationSlug = (segments[2] && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2])) 
+                        ? segments[2] 
+                        : segments[1];
+                        
                     activeCitiesList.push({
-                        name: fromSlug(segments[segments.length - 1]),
+                        name: fromSlug(rawLocationSlug),
                         lat: currentLat,
                         lon: currentLon,
                         temp: weatherData.currentTemp ?? 15,
@@ -243,7 +249,8 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ articles = []
                     const radarUrl = `${radarConfig.host}${radarConfig.path}/256/{z}/{x}/{y}/1/1_1.png`;
                     const radarLayer = L.tileLayer(radarUrl, {
                         opacity: 0.75,
-                        maxZoom: 18
+                        maxZoom: 18,
+                        maxNativeZoom: 12 // ⚡️ Failsafe: Stops out-of-bounds 404 tile dropouts
                     });
                     radarLayer.addTo(map);
                     radarOverlayRef.current = radarLayer;
@@ -326,6 +333,41 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ articles = []
                     markersGroupRef.current.addLayer(marker);
                 });
             }
+
+            // Paint permanent anchor marker for active location on all layers
+            if (isCityPage && weatherData?.coord) {
+                const currentLat = weatherData.coord.lat;
+                const currentLon = weatherData.coord.lon;
+                if (currentLat && currentLon) {
+                    const locationName = fromSlug(
+                        (segments[2] && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2])) 
+                        ? segments[2] 
+                        : segments[1]
+                    );
+
+                    const anchorIcon = L.divIcon({
+                        className: 'active-location-anchor',
+                        html: `
+                            <div class="relative flex items-center justify-center" style="width: 24px; height: 24px;">
+                                <div class="absolute rounded-full bg-yellow-500 animate-ping opacity-75" style="width: 20px; height: 20px;"></div>
+                                <div class="rounded-full bg-yellow-500" style="width: 10px; height: 10px; border: 2px solid #ffffff; box-shadow: 0 0 15px #eab308; border-color: #eab308;"></div>
+                            </div>
+                        `,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
+
+                    const anchorMarker = L.marker([currentLat, currentLon], { icon: anchorIcon });
+                    const popupContent = `
+                        <div class="p-2 text-center font-sans">
+                            <strong class="text-slate-800 font-bold block text-sm mb-1">${locationName}</strong>
+                            <span class="text-xs text-slate-500">Aktif Tahmin Noktası</span>
+                        </div>
+                    `;
+                    anchorMarker.bindPopup(popupContent);
+                    markersGroupRef.current.addLayer(anchorMarker);
+                }
+            }
         };
 
         updateLayers();
@@ -337,7 +379,8 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ articles = []
             <div ref={mapContainerRef} className={`w-full h-[350px] md:h-[400px] lg:h-[450px] z-0 ${isDarkMode ? 'dark-map' : ''}`} />
             
             <style>{`
-                .dark-map .leaflet-tile-container {
+                /* Invert ONLY the OSM basemap tiles, leaving radar color bands mathematically pure */
+                .dark-map .leaflet-layer:first-child .leaflet-tile-container {
                     filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) !important;
                 }
                 .leaflet-popup-content-wrapper {
