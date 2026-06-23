@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-
-// Enforce Leaflet CSS directly into this bundle slot
-import 'leaflet/dist/leaflet.css';
+import { Icon } from './Icons';
 import { fromSlug } from '../services/weatherService';
+
+import 'leaflet/dist/leaflet.css';
 
 const MAJOR_CITIES = [
     { name: 'İstanbul', lat: 41.0082, lon: 28.9784, key: 'istanbul' },
@@ -22,56 +22,51 @@ const MAJOR_CITIES = [
 ];
 
 interface InteractiveRadarMapProps {
-    articles?: any[];
-    weatherData?: any;
-    compact?: boolean;
+    weatherData?: any | null;
+    isDarkMode?: boolean;
 }
 
-const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ articles = [], weatherData, compact = false }) => {
-    const mapRef = useRef<any>(null);
-    const tileLayerRef = useRef<any>(null);
-    const mapContainerRef = useRef<HTMLDivElement>(null);
-    const radarOverlayRef = useRef<any>(null);
-    const markersGroupRef = useRef<any>(null);
+type LayerType = 'radar' | 'temp' | 'wind';
 
-    const [mapReady, setMapReady] = useState(false);
-    const [activeLayer, setActiveLayer] = useState<'radar' | 'wind' | 'temp'>('radar');
+const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, isDarkMode = true }) => {
+    if (typeof window === 'undefined') {
+        return <div className="w-full h-[350px] md:h-[400px] lg:h-[450px] bg-slate-950 rounded-xl animate-pulse" />;
+    }
+
+    const [activeLayer, setActiveLayer] = useState<LayerType>('radar');
     const [cityWeatherData, setCityWeatherData] = useState<any[]>([]);
     const [radarConfig, setRadarConfig] = useState<{ host: string; path: string } | null>(null);
+    const [mapReady, setMapReady] = useState(false);
 
-    const isDarkMode = document.documentElement.classList.contains('dark');
+    const mapRef = useRef<any>(null);
+    const mapContainerRef = useRef<HTMLDivElement>(null);
+    const tileLayerRef = useRef<any>(null);
+    const radarOverlayRef = useRef<any>(null);
+    const markersGroupRef = useRef<any>(null);
+    const contextMarkerRef = useRef<any>(null);
 
-    // 1. Fetch RainViewer configuration via backend rest proxy (avoiding CSP connect block)
     useEffect(() => {
         const fetchRadarConfig = async () => {
             try {
                 const response = await fetch('/wp-json/sinan/v1/radar');
                 if (!response.ok) throw new Error('Proxy Radar API failed');
                 const data = await response.json();
-                
                 const host = data?.host;
                 const pastFrames = data?.radar?.past;
                 
                 if (host && Array.isArray(pastFrames) && pastFrames.length > 0) {
                     const latestFrame = pastFrames[pastFrames.length - 1];
                     const path = latestFrame?.path;
-                    if (path) {
-                        setRadarConfig({ host, path });
-                    }
+                    if (path) setRadarConfig({ host, path });
                 }
             } catch (err) {
-                console.error('[Radar Map] Config fetch failed, falling back:', err);
-                setRadarConfig({
-                    host: 'https://tilecache.rainviewer.com',
-                    path: '/v2/radar/nowcast'
-                });
+                console.error('[Radar Map] Config fallback triggered:', err);
+                setRadarConfig({ host: 'https://tilecache.rainviewer.com', path: '/v2/radar/nowcast' });
             }
         };
-
         fetchRadarConfig();
     }, []);
 
-    // 2. Fetch major cities weather for vector overlays
     useEffect(() => {
         const fetchCitiesWeather = async () => {
             try {
@@ -83,55 +78,39 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ articles = []
                 if (!response.ok) throw new Error('Open-Meteo multi-city fetch failed');
                 const data = await response.json();
                 
-                if (Array.isArray(data)) {
-                    const mapped = data.map((item, index) => ({
-                        ...MAJOR_CITIES[index],
-                        temp: item?.current?.temperature_2m ?? 15,
-                        windSpeed: item?.current?.wind_speed_10m ?? 10,
-                        windDir: item?.current?.wind_direction_10m ?? 0
-                    }));
-                    setCityWeatherData(mapped);
-                } else if (data && typeof data === 'object') {
-                    const mapped = MAJOR_CITIES.map((city, index) => {
-                        const cityItem = Array.isArray(data) ? data[index] : (data[index] || data);
-                        return {
-                            ...city,
-                            temp: cityItem?.current?.temperature_2m ?? 15,
-                            windSpeed: cityItem?.current?.wind_speed_10m ?? 10,
-                            windDir: cityItem?.current?.wind_direction_10m ?? 0
-                        };
-                    });
-                    setCityWeatherData(mapped);
-                }
+                const mapped = MAJOR_CITIES.map((city, index) => {
+                    const cityItem = Array.isArray(data) ? data[index] : data;
+                    return {
+                        ...city,
+                        temp: cityItem?.current?.temperature_2m ?? 15,
+                        windSpeed: cityItem?.current?.wind_speed_10m ?? 10,
+                        windDir: cityItem?.current?.wind_direction_10m ?? 0
+                    };
+                });
+                setCityWeatherData(mapped);
             } catch (err) {
                 console.error('[Radar Map] Cities weather fetch failed:', err);
             }
         };
-
         fetchCitiesWeather();
     }, []);
 
-    // 3. SAFE SPA LIFE-CYCLE IMPLEMENTATION VIA useRef
     useEffect(() => {
         let isMounted = true;
-
-        if (typeof window !== 'undefined' && mapContainerRef.current) {
+        if (!mapRef.current && mapContainerRef.current) {
             import('leaflet').then((L) => {
                 if (!isMounted || mapRef.current) return;
 
                 const path = window.location.pathname;
                 const segments = path.split('/').filter(Boolean);
-                const isCityPage = segments.length >= 2 && 
-                                   segments[0] === 'hava-durumu' && 
-                                   !['yarin', '15-gunluk', 'hafta-sonu', 'analiz', 'haberler', 'iletisim', 'hakkimizda', 'gizlilik-politikasi', 'kullanim-kosullari', 'wp-admin', 'wp-json', 'sitemap', 'feed', 'rss', 'konum-ara', 'island-demo', 'deniz-suyu-sicakligi', 'sehirler'].includes(segments[1]);
+                const isCityPage = segments.length >= 2 && segments[0] === 'hava-durumu';
+                const isDistrictPage = isCityPage && segments.length === 3 && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2]);
 
                 const payload = (window as any).SinanWeatherPayload;
-                const isDistrictPage = isCityPage && segments.length === 3 && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2]);
                 const initialLat = isCityPage && payload?.weatherData?.latitude ? payload.weatherData.latitude : 39.0000;
                 const initialLon = isCityPage && payload?.weatherData?.longitude ? payload.weatherData.longitude : 35.5000;
                 const initialZoom = isDistrictPage ? 11 : isCityPage ? 8 : 6;
 
-                // Initialize Leaflet Map with strict zoom ceiling limits
                 const map = L.map(mapContainerRef.current!, {
                     minZoom: 4,
                     maxZoom: 18,
@@ -141,298 +120,172 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ articles = []
                 }).setView([initialLat, initialLon], initialZoom);
                 mapRef.current = map;
 
-                // Standard OpenStreetMap track (renders local Turkish labels natively)
-                const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                tileLayerRef.current = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 18,
                     attribution: '&copy; OpenStreetMap contributors'
                 }).addTo(map);
-                tileLayerRef.current = tileLayer;
 
-                // Restrict bounds to Turkey geometry
                 const southWest = L.latLng(34.0, 24.0);
                 const northEast = L.latLng(43.0, 46.0);
-                const bounds = L.latLngBounds(southWest, northEast);
-                map.setMaxBounds(bounds);
+                map.setMaxBounds(L.latLngBounds(southWest, northEast));
 
-                // Add Zoom Control at bottom right
                 L.control.zoom({ position: 'bottomright' }).addTo(map);
-
                 markersGroupRef.current = L.layerGroup().addTo(map);
-
                 setMapReady(true);
+
+                setTimeout(() => { if (mapRef.current) mapRef.current.invalidateSize(); }, 200);
             });
         }
-
         return () => {
             isMounted = false;
-            if (mapRef.current) {
-                mapRef.current.remove();
-                mapRef.current = null;
-            }
+            if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
             setMapReady(false);
         };
     }, []);
 
-    // Handle safe single-page routing re-centering without constructor crashes
     useEffect(() => {
         if (mapRef.current && mapReady) {
             const path = window.location.pathname;
             const segments = path.split('/').filter(Boolean);
-            const isCityPage = segments.length >= 2 && 
-                               segments[0] === 'hava-durumu' && 
-                               !['yarin', '15-gunluk', 'hafta-sonu', 'analiz', 'haberler', 'iletisim', 'hakkimizda', 'gizlilik-politikasi', 'kullanim-kosullari', 'wp-admin', 'wp-json', 'sitemap', 'feed', 'rss', 'konum-ara', 'island-demo', 'deniz-suyu-sicakligi', 'sehirler'].includes(segments[1]);
-
+            const isCityPage = segments.length >= 2 && segments[0] === 'hava-durumu';
             const isDistrictPage = isCityPage && segments.length === 3 && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2]);
+
             if (isCityPage && weatherData?.coord) {
                 const { lat, lon } = weatherData.coord;
                 if (typeof lat === 'number' && typeof lon === 'number') {
                     mapRef.current.setView([lat, lon], isDistrictPage ? 11 : 8, { animate: true });
                 }
             } else {
-                // Return to Turkey overview when on homepage
                 mapRef.current.setView([39.0000, 35.5000], 6, { animate: true });
             }
         }
     }, [weatherData?.coord, mapReady]);
 
-    // Update overlays (precipitation, temperature badges, wind vectors) on configuration shifts
     useEffect(() => {
         const updateLayers = async () => {
             const map = mapRef.current;
             if (!map || !mapReady) return;
-
             const L = await import('leaflet');
 
-            // Clean up old radar overlays
-            if (radarOverlayRef.current) {
-                map.removeLayer(radarOverlayRef.current);
-                radarOverlayRef.current = null;
-            }
+            if (radarOverlayRef.current) { map.removeLayer(radarOverlayRef.current); radarOverlayRef.current = null; }
+            if (markersGroupRef.current) markersGroupRef.current.clearLayers();
+            if (contextMarkerRef.current) { map.removeLayer(contextMarkerRef.current); contextMarkerRef.current = null; }
 
-            // Clean up old markers
-            if (markersGroupRef.current) {
-                markersGroupRef.current.clearLayers();
-            }
-
-            const safeLayer = activeLayer || 'radar';
             const path = window.location.pathname;
             const segments = path.split('/').filter(Boolean);
             const isCityPage = segments.length >= 2 && segments[0] === 'hava-durumu';
 
-            // Combine hardcoded cities with active high-accuracy context location
             let activeCitiesList = [...cityWeatherData];
+            let currentContextLocation: any = null;
+
             if (isCityPage && weatherData?.coord) {
                 const currentLat = weatherData.coord.lat;
                 const currentLon = weatherData.coord.lon;
                 const exists = activeCitiesList.some(c => Math.abs(c.lat - currentLat) < 0.01 && Math.abs(c.lon - currentLon) < 0.01);
                 
-                if (!exists && currentLat && currentLon) {
-                    // Safely isolate the district name slug from segment index [2] if it exists
-                    const rawLocationSlug = (segments[2] && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2])) 
-                        ? segments[2] 
-                        : segments[1];
-                        
-                    activeCitiesList.push({
-                        name: fromSlug(rawLocationSlug),
-                        lat: currentLat,
-                        lon: currentLon,
-                        temp: weatherData.currentTemp ?? 15,
-                        windSpeed: weatherData.windSpeed ?? 10,
-                        windDir: weatherData.windDir || weatherData.windDirection || 0,
-                        isCurrentContext: true
-                    });
-                }
+                const rawLocationSlug = (segments[2] && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2])) ? segments[2] : segments[1];
+                currentContextLocation = {
+                    name: fromSlug(rawLocationSlug),
+                    lat: currentLat,
+                    lon: currentLon,
+                    temp: weatherData.currentTemp ?? 15,
+                    windSpeed: weatherData.windSpeed ?? 10,
+                    windDir: weatherData.windDir || weatherData.windDirection || 0,
+                    isCurrentContext: true
+                };
+                if (!exists && currentLat && currentLon) activeCitiesList.push(currentContextLocation);
             }
 
+            // Draw permanent highlighted gold context beacon across ALL layer views
+            if (isCityPage && weatherData?.coord?.lat && weatherData?.coord?.lon) {
+                const beaconIcon = L.divIcon({
+                    className: 'context-beacon-marker',
+                    html: `
+                        <div class="relative flex items-center justify-center" style="width: 24px; height: 24px;">
+                            <div class="absolute rounded-full bg-yellow-500 animate-ping opacity-75" style="width: 20px; height: 20px;"></div>
+                            <div class="rounded-full bg-yellow-500" style="width: 10px; height: 10px; border: 2px solid #ffffff; box-shadow: 0 0 15px #eab308;"></div>
+                        </div>
+                    `,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
+                const labelName = currentContextLocation?.name || fromSlug(segments[1]);
+                const beaconMarker = L.marker([weatherData.coord.lat, weatherData.coord.lon], { icon: beaconIcon });
+                beaconMarker.bindPopup(`<div class="p-1 text-center font-bold text-slate-800">${labelName}</div>`);
+                beaconMarker.addTo(map);
+                contextMarkerRef.current = beaconMarker;
+            }
+
+            const safeLayer = activeLayer || 'radar';
             if (safeLayer === 'radar') {
                 if (radarConfig) {
                     const radarUrl = `${radarConfig.host}${radarConfig.path}/256/{z}/{x}/{y}/1/1_1.png`;
                     const radarLayer = L.tileLayer(radarUrl, {
                         opacity: 0.75,
                         maxZoom: 18,
-                        maxNativeZoom: 12 // ⚡️ Failsafe: Stops out-of-bounds 404 tile dropouts
+                        maxNativeZoom: 7 // ⚡️ March 2026 Personal API Fix: Scales level 7 tiles cleanly, removing "Zoom level not supported" error tags.
                     });
                     radarLayer.addTo(map);
                     radarOverlayRef.current = radarLayer;
                 }
             } else if (safeLayer === 'temp') {
-                // Renders custom glowing circular temperature badges
                 activeCitiesList.forEach((city) => {
                     const tempVal = Math.round(city?.temp ?? 15);
+                    const isCtx = city.isCurrentContext;
                     const color = tempVal >= 30 ? '#ef4444' : tempVal >= 20 ? '#f97316' : tempVal >= 10 ? '#22c55e' : '#3b82f6';
-                    const isCurrent = city.isCurrentContext === true;
                     
                     const markerIcon = L.divIcon({
                         className: 'custom-temp-marker',
-                        html: `
-                            <div class="flex items-center justify-center rounded-full font-bold text-white shadow-lg border"
-                                 style="
-                                     background-color: ${color};
-                                     width: 32px;
-                                     height: 32px;
-                                     font-size: 11px;
-                                     box-shadow: ${isCurrent ? '0 0 15px #eab308' : `0 0 10px ${color}80`};
-                                     border-color: ${isCurrent ? '#eab308' : '#ffffff'};
-                                     border-width: ${isCurrent ? '2px' : '1px'};
-                                 ">
-                                ${tempVal}°
-                            </div>
-                        `,
+                        html: `<div class="flex items-center justify-center rounded-full font-bold text-white shadow-lg" style="background-color: ${color}; width: 32px; height: 32px; font-size: 11px; border: ${isCtx ? '2px solid #eab308' : '1px solid #ffffff'}; box-shadow: ${isCtx ? '0 0 15px #eab308' : `0 0 10px ${color}80`};">${tempVal}°</div>`,
                         iconSize: [32, 32],
                         iconAnchor: [16, 16]
                     });
-
                     const marker = L.marker([city?.lat ?? 39.0, city?.lon ?? 35.5], { icon: markerIcon });
-                    
-                    const popupContent = `
-                        <div class="p-2 text-center font-sans">
-                            <strong class="text-slate-800 font-bold block text-sm mb-1">${city?.name ?? ''}</strong>
-                            <span class="text-lg font-extrabold" style="color: ${color};">${tempVal}°C</span>
-                        </div>
-                    `;
-                    marker.bindPopup(popupContent);
+                    marker.bindPopup(`<div class="p-2 text-center font-sans"><strong class="text-slate-800 font-bold block text-sm mb-1">${city?.name ?? ''} ${isCtx ? '(Seçili)' : ''}</strong><span class="text-lg font-extrabold" style="color: ${color};">${tempVal}°C</span></div>`);
                     markersGroupRef.current.addLayer(marker);
                 });
             } else if (safeLayer === 'wind') {
-                // Renders wind speed with rotating arrows (glowing vector mappers)
                 activeCitiesList.forEach((city) => {
                     const speed = Math.round(city?.windSpeed ?? 10);
                     const dir = city?.windDir ?? 0;
-                    const isCurrent = city.isCurrentContext === true;
+                    const isCtx = city.isCurrentContext;
                     
                     const markerIcon = L.divIcon({
                         className: 'custom-wind-marker',
-                        html: `
-                            <div class="flex items-center gap-1 bg-slate-900/90 text-white rounded-lg px-1.5 py-1 border shadow-md"
-                                 style="
-                                     font-size: 9px; 
-                                     font-weight: 500;
-                                     box-shadow: ${isCurrent ? '0 0 15px #eab308' : '0 4px 6px rgba(0,0,0,0.1)'};
-                                     border-color: ${isCurrent ? '#eab308' : '#334155'};
-                                     border-width: ${isCurrent ? '2px' : '1px'};
-                                 ">
-                                <div style="transform: rotate(${dir}deg); transition: transform 0.3s; display: inline-block;">
-                                    ⬆️
-                                </div>
-                                <span>${speed} km/s</span>
-                            </div>
-                        `,
+                        html: `<div class="flex items-center gap-1 text-white rounded-lg px-1.5 py-1" style="font-size: 9px; font-weight: 500; background-color: rgba(15, 23, 42, 0.95); border: ${isCtx ? '2px solid #eab308' : '1px solid #334155'}; box-shadow: ${isCtx ? '0 0 15px #eab308' : '0 4px 6px rgba(0,0,0,0.1)'};"><div style="transform: rotate(${dir}deg); display: inline-block;">⬆️</div><span>${speed} km/s</span></div>`,
                         iconSize: [60, 24],
                         iconAnchor: [30, 12]
                     });
-
                     const marker = L.marker([city?.lat ?? 39.0, city?.lon ?? 35.5], { icon: markerIcon });
-                    const popupContent = `
-                        <div class="p-2 text-center font-sans">
-                            <strong class="text-slate-800 font-bold block text-sm mb-1">${city?.name ?? ''} Rüzgar Raporu</strong>
-                            <span class="text-slate-600 text-xs">Hız: <strong>${speed} km/sa</strong></span><br/>
-                            <span class="text-slate-600 text-xs">Yön: <strong>${dir}°</strong></span>
-                        </div>
-                    `;
-                    marker.bindPopup(popupContent);
+                    marker.bindPopup(`<div class="p-2 text-center font-sans"><strong class="text-slate-800 font-bold block text-sm mb-1">${city?.name ?? ''} Rüzgar Raporu</strong><span class="text-slate-600 text-xs">Hız: <strong>${speed} km/sa</strong></span><br/><span class="text-slate-600 text-xs">Yön: <strong>${dir}°</strong></span></div>`);
                     markersGroupRef.current.addLayer(marker);
                 });
             }
-
-            // Paint permanent anchor marker for active location on all layers
-            if (isCityPage && weatherData?.coord) {
-                const currentLat = weatherData.coord.lat;
-                const currentLon = weatherData.coord.lon;
-                if (currentLat && currentLon) {
-                    const locationName = fromSlug(
-                        (segments[2] && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2])) 
-                        ? segments[2] 
-                        : segments[1]
-                    );
-
-                    const anchorIcon = L.divIcon({
-                        className: 'active-location-anchor',
-                        html: `
-                            <div class="relative flex items-center justify-center" style="width: 24px; height: 24px;">
-                                <div class="absolute rounded-full bg-yellow-500 animate-ping opacity-75" style="width: 20px; height: 20px;"></div>
-                                <div class="rounded-full bg-yellow-500" style="width: 10px; height: 10px; border: 2px solid #ffffff; box-shadow: 0 0 15px #eab308; border-color: #eab308;"></div>
-                            </div>
-                        `,
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 12]
-                    });
-
-                    const anchorMarker = L.marker([currentLat, currentLon], { icon: anchorIcon });
-                    const popupContent = `
-                        <div class="p-2 text-center font-sans">
-                            <strong class="text-slate-800 font-bold block text-sm mb-1">${locationName}</strong>
-                            <span class="text-xs text-slate-500">Aktif Tahmin Noktası</span>
-                        </div>
-                    `;
-                    anchorMarker.bindPopup(popupContent);
-                    markersGroupRef.current.addLayer(anchorMarker);
-                }
-            }
         };
-
         updateLayers();
     }, [activeLayer, cityWeatherData, radarConfig, mapReady, weatherData]);
 
     return (
         <div className="w-full relative rounded-xl overflow-hidden shadow-lg border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900 transition-colors duration-300">
-            {/* Map Container - Theme Aware hardware accelerated dark filter style */}
-            <div ref={mapContainerRef} className={`w-full h-[350px] md:h-[400px] lg:h-[450px] z-0 ${isDarkMode ? 'dark-map' : ''}`} />
-            
-            <style>{`
-                /* Invert ONLY the OSM basemap tiles, leaving radar color bands mathematically pure */
-                .dark-map .leaflet-layer:first-child .leaflet-tile-container {
-                    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) !important;
-                }
-                .leaflet-popup-content-wrapper {
-                    background: rgba(30, 41, 59, 0.95) !important;
-                    color: #f8fafc !important;
-                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                    backdrop-filter: blur(10px) !important;
-                    border-radius: 12px !important;
-                    overflow: hidden;
-                }
-                .leaflet-popup-tip {
-                    background: rgba(30, 41, 59, 0.95) !important;
-                }
-                .leaflet-popup-content strong {
-                    color: #ffffff !important;
-                }
-                .leaflet-bar {
-                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
-                    border-radius: 8px !important;
-                    overflow: hidden;
-                }
-                .leaflet-bar a {
-                    background-color: rgba(30, 41, 59, 0.9) !important;
-                    color: #ffffff !important;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-                }
-                .leaflet-bar a:hover {
-                    background-color: rgba(51, 65, 85, 0.9) !important;
-                }
-            `}</style>
-
-            {/* Floating Control Menu Layer */}
-            <div className="absolute top-4 right-4 z-[1000] flex gap-2 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-lg border border-white/10 shadow-xl">
-                <button 
-                    onClick={() => setActiveLayer('radar')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-all ${activeLayer === 'radar' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
-                >
-                    Radar
-                </button>
-                <button 
-                    onClick={() => setActiveLayer('wind')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-all ${activeLayer === 'wind' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
-                >
-                    Rüzgar
-                </button>
-                <button 
-                    onClick={() => setActiveLayer('temp')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-all ${activeLayer === 'temp' ? 'bg-blue-500 text-white shadow-md' : 'text-slate-300 hover:text-white'}`}
-                >
-                    Sıcaklık
-                </button>
+            <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center pointer-events-none">
+                <div className="flex bg-slate-950/80 dark:bg-slate-900/90 backdrop-blur-md rounded-xl p-1.5 border border-white/10 shadow-lg pointer-events-auto gap-1">
+                    <button onClick={() => setActiveLayer('radar')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 flex items-center ${activeLayer === 'radar' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><Icon.CloudRain className="w-3.5 h-3.5 mr-1.5" />Yağış Radarı</button>
+                    <button onClick={() => setActiveLayer('temp')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 flex items-center ${activeLayer === 'temp' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><Icon.Thermometer className="w-3.5 h-3.5 mr-1.5" />Sıcaklık</button>
+                    <button onClick={() => setActiveLayer('wind')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 flex items-center ${activeLayer === 'wind' ? 'bg-green-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><Icon.Wind className="w-3.5 h-3.5 mr-1.5" />Rüzgar</button>
+                </div>
+                <div className="hidden sm:flex bg-slate-950/80 dark:bg-slate-900/90 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10 shadow-lg text-[10px] font-semibold text-slate-300 items-center pointer-events-auto"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping mr-2"></span>Canlı Meteoroloji Radarı</div>
+            </div>
+            <div className={`relative w-full h-[350px] md:h-[400px] lg:h-[450px] z-0 ${isDarkMode ? 'dark-map' : ''}`}>
+                <style>{`
+                    .dark-map .leaflet-layer:first-child .leaflet-tile-container { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) !important; }
+                    .leaflet-popup-content-wrapper { background: rgba(30, 41, 59, 0.95) !important; color: #f8fafc !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; backdrop-filter: blur(10px) !important; border-radius: 12px !important; }
+                    .leaflet-popup-tip { background: rgba(30, 41, 59, 0.95) !important; }
+                    .leaflet-popup-content strong { color: #ffffff !important; }
+                    .leaflet-bar { border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 8px !important; overflow: hidden; }
+                    .leaflet-bar a { background-color: rgba(30, 41, 59, 0.9) !important; color: #ffffff !important; border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; }
+                    .leaflet-bar a:hover { background-color: rgba(51, 65, 85, 0.9) !important; }
+                `}</style>
+                <div ref={mapContainerRef} className="w-full h-full" />
             </div>
         </div>
     );
