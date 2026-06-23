@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Icon } from './Icons';
-import { fromSlug } from '../services/weatherService';
+import { fromSlug, toSlug } from '../services/weatherService';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -107,8 +107,8 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                 const isDistrictPage = isCityPage && segments.length === 3 && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2]);
 
                 const payload = (window as any).SinanWeatherPayload;
-                const initialLat = isCityPage && payload?.weatherData?.latitude ? payload.weatherData.latitude : 39.0000;
-                const initialLon = isCityPage && payload?.weatherData?.longitude ? payload.weatherData.longitude : 35.5000;
+                const initialLat = isCityPage && payload?.weatherData?.latitude ? payload.weatherData.latitude : 38.9637;
+                const initialLon = isCityPage && payload?.weatherData?.longitude ? payload.weatherData.longitude : 35.2433;
                 const initialZoom = isDistrictPage ? 11 : isCityPage ? 8 : 6;
 
                 const map = L.map(mapContainerRef.current!, {
@@ -156,7 +156,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                     mapRef.current.setView([lat, lon], isDistrictPage ? 11 : 8, { animate: true });
                 }
             } else {
-                mapRef.current.setView([39.0000, 35.5000], 6, { animate: true });
+                mapRef.current.setView([38.9637, 35.2433], 6, { animate: true });
             }
         }
     }, [weatherData?.coord, mapReady]);
@@ -190,13 +190,12 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                     lon: currentLon,
                     temp: weatherData.currentTemp ?? 15,
                     windSpeed: weatherData.windSpeed ?? 10,
-                    windDir: weatherData.windDir || weatherData.windDirection || 0,
+                    windDir: weatherData.windDirection ?? weatherData.windDir ?? 0,
                     isCurrentContext: true
                 };
                 if (!exists && currentLat && currentLon) activeCitiesList.push(currentContextLocation);
             }
 
-            // Draw permanent highlighted gold context beacon across ALL layer views
             if (isCityPage && weatherData?.coord?.lat && weatherData?.coord?.lon) {
                 const beaconIcon = L.divIcon({
                     className: 'context-beacon-marker',
@@ -223,7 +222,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                     const radarLayer = L.tileLayer(radarUrl, {
                         opacity: 0.75,
                         maxZoom: 18,
-                        maxNativeZoom: 7 // ⚡️ March 2026 Personal API Fix: Scales level 7 tiles cleanly, removing "Zoom level not supported" error tags.
+                        maxNativeZoom: 7
                     });
                     radarLayer.addTo(map);
                     radarOverlayRef.current = radarLayer;
@@ -247,11 +246,9 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
             } else if (safeLayer === 'wind') {
                 activeCitiesList.forEach((city) => {
                     const speed = Math.round(city?.windSpeed ?? 10);
-                    // Safely evaluate all wind direction variants from the model streams
-                    const dir = city?.windDir ?? city?.windDirection ?? weatherData?.windDirection ?? weatherData?.windDir ?? 0;
+                    const dir = city?.windDir ?? city?.windDirection ?? 0;
                     const isCtx = city.isCurrentContext;
                     
-                    // ⬇️ Down arrow represents true air movement direction for a 0° North wind
                     const markerIcon = L.divIcon({
                         className: 'custom-wind-marker',
                         html: `
