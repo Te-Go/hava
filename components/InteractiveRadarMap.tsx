@@ -247,17 +247,24 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
             } else if (safeLayer === 'wind') {
                 activeCitiesList.forEach((city) => {
                     const speed = Math.round(city?.windSpeed ?? 10);
-                    const dir = city?.windDir ?? 0;
+                    // Safely evaluate all wind direction variants from the model streams
+                    const dir = city?.windDir ?? city?.windDirection ?? weatherData?.windDirection ?? weatherData?.windDir ?? 0;
                     const isCtx = city.isCurrentContext;
                     
+                    // ⬇️ Down arrow represents true air movement direction for a 0° North wind
                     const markerIcon = L.divIcon({
                         className: 'custom-wind-marker',
-                        html: `<div class="flex items-center gap-1 text-white rounded-lg px-1.5 py-1" style="font-size: 9px; font-weight: 500; background-color: rgba(15, 23, 42, 0.95); border: ${isCtx ? '2px solid #eab308' : '1px solid #334155'}; box-shadow: ${isCtx ? '0 0 15px #eab308' : '0 4px 6px rgba(0,0,0,0.1)'};"><div style="transform: rotate(${dir}deg); display: inline-block;">⬆️</div><span>${speed} km/s</span></div>`,
+                        html: `
+                            <div class="flex items-center gap-1 text-white rounded-lg px-1.5 py-1" style="font-size: 9px; font-weight: 500; background-color: rgba(15, 23, 42, 0.95); border: ${isCtx ? '2px solid #eab308' : '1px solid #334155'}; box-shadow: ${isCtx ? '0 0 15px #eab308' : '0 4px 6px rgba(0,0,0,0.1)'};">
+                                <div style="transform: rotate(${dir}deg); display: inline-block; font-size: 10px;">⬇️</div>
+                                <span>${speed} km/s</span>
+                            </div>
+                        `,
                         iconSize: [60, 24],
                         iconAnchor: [30, 12]
                     });
                     const marker = L.marker([city?.lat ?? 39.0, city?.lon ?? 35.5], { icon: markerIcon });
-                    marker.bindPopup(`<div class="p-2 text-center font-sans"><strong class="text-slate-800 font-bold block text-sm mb-1">${city?.name ?? ''} Rüzgar Raporu</strong><span class="text-slate-600 text-xs">Hız: <strong>${speed} km/sa</strong></span><br/><span class="text-slate-600 text-xs">Yön: <strong>${dir}°</strong></span></div>`);
+                    marker.bindPopup(`<div class="p-2 text-center font-sans"><strong class="text-slate-800 font-bold block text-sm mb-1">${city?.name ?? ''} Rüzgar Raporu ${isCtx ? '(Seçili)' : ''}</strong><span class="text-slate-600 text-xs">Hız: <strong>${speed} km/sa</strong></span><br/><span class="text-slate-600 text-xs">Yön: <strong>${dir}°</strong></span></div>`);
                     markersGroupRef.current.addLayer(marker);
                 });
             }

@@ -610,7 +610,8 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       try {
         const citySlug = toSlug(currentCity);
         const globalPayload = (window as any).SinanWeatherPayload;
-        if (globalPayload && globalPayload.weatherData && globalPayload.weatherData.current && typeof globalPayload.weatherData.current === 'object' && Object.keys(globalPayload.weatherData.current).length > 0 && toSlug(globalPayload.city) === citySlug) {
+        const isRootPath = window.location.pathname === '/' || window.location.pathname === '/hava-durumu' || window.location.pathname === '/hava-durumu/';
+        if (!isRootPath && globalPayload && globalPayload.weatherData && globalPayload.weatherData.current && typeof globalPayload.weatherData.current === 'object' && Object.keys(globalPayload.weatherData.current).length > 0 && toSlug(globalPayload.city) === citySlug) {
           const safeWeatherData = await mapOpenMeteoToModel(citySlug, globalPayload.weatherData);
           setWeatherData(safeWeatherData);
           
