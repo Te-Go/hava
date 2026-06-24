@@ -43,9 +43,10 @@ const SeaTempLeafletMap: React.FC<SeaTempLeafletMapProps> = ({ locations, onLoca
                 attributionControl: false
             });
 
-            // Add OpenStreetMap tiles (free, no API key)
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
+            // Add Google Maps Turkish localized tiles
+            L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=tr&x={x}&y={y}&z={z}', {
+                maxZoom: 10,
+                attribution: '&copy; Google Maps'
             }).addTo(map);
 
             // Restrict panning to Turkey region

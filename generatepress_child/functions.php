@@ -54,17 +54,29 @@ function generatepress_child_enqueue_styles() {
 // SINAN: Client-Side Redirect Interceptor for KVKK/GDPR compliant local dashboard routing
 add_action('wp_head', 'tedder_city_memory_redirect', 5);
 function tedder_city_memory_redirect() {
-    // Only run this intercept on the exact root hub URL
-    if ( is_page('hava-durumu') && !get_query_var('weather_city') ) {
+    // Only run this intercept on the exact root hub URLs
+    if ( ( is_page('hava-durumu') || is_front_page() || is_home() ) && !get_query_var('weather_city') ) {
         ?>
         <script>
             (function() {
                 // 1. Check if the user has a saved city in their browser
-                var lastCity = localStorage.getItem('sinan_last_city');
+                var lastCity = localStorage.getItem('sinan_last_city') || localStorage.getItem('last_visited_city');
                 
-                // 2. If it exists, immediately route them to their local hub
+                // 2. Route them to their local hub, fallback to Istanbul
                 if (lastCity) {
-                    window.location.replace('/hava-durumu/' + lastCity + '/');
+                    var slug = lastCity.toLowerCase()
+                        .replace(/ı/g, 'i')
+                        .replace(/ğ/g, 'g')
+                        .replace(/ü/g, 'u')
+                        .replace(/ş/g, 's')
+                        .replace(/ö/g, 'o')
+                        .replace(/ç/g, 'c')
+                        .replace(/[^a-z0-9\-]/g, '-')
+                        .replace(/-+/g, '-')
+                        .replace(/^-+|-+$/g, '');
+                    window.location.replace('/hava-durumu/' + slug + '/');
+                } else {
+                    window.location.replace('/hava-durumu/istanbul/');
                 }
             })();
         </script>

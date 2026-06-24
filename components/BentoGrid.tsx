@@ -185,15 +185,23 @@ const BentoGrid: React.FC<{ data: WeatherData }> = ({ data }) => {
   const getWindLabel = (dir: string | number): string => {
     const num = parseFloat(dir as string);
     if (isNaN(num)) return dir as string;
-    if (num >= 337.5 || num < 22.5) return "Kuzey";
-    if (num >= 22.5 && num < 67.5) return "Kuzeydoğu";
-    if (num >= 67.5 && num < 112.5) return "Doğu";
-    if (num >= 112.5 && num < 157.5) return "Güneydoğu";
-    if (num >= 157.5 && num < 202.5) return "Güney";
-    if (num >= 202.5 && num < 247.5) return "Güneybatı";
-    if (num >= 247.5 && num < 292.5) return "Batı";
-    if (num >= 292.5 && num < 337.5) return "Kuzeybatı";
-    return "";
+    const normalized = ((num % 360) + 360) % 360;
+    if (normalized >= 348.75 || normalized < 11.25) return 'Kuzey';
+    if (normalized >= 11.25 && normalized < 33.75) return 'Kuzey-Kuzeydoğu';
+    if (normalized >= 33.75 && normalized < 56.25) return 'Kuzeydoğu';
+    if (normalized >= 56.25 && normalized < 78.75) return 'Doğu-Kuzeydoğu';
+    if (normalized >= 78.75 && normalized < 101.25) return 'Doğu';
+    if (normalized >= 101.25 && normalized < 123.75) return 'Doğu-Güneydoğu';
+    if (normalized >= 123.75 && normalized < 146.25) return 'Güneydoğu';
+    if (normalized >= 146.25 && normalized < 168.75) return 'Güney-Güneydoğu';
+    if (normalized >= 168.75 && normalized < 191.25) return 'Güney';
+    if (normalized >= 191.25 && normalized < 213.75) return 'Güney-Güneybatı';
+    if (normalized >= 213.75 && normalized < 236.25) return 'Güneybatı';
+    if (normalized >= 236.25 && normalized < 258.75) return 'Batı-Güneybatı';
+    if (normalized >= 258.75 && normalized < 281.25) return 'Batı';
+    if (normalized >= 281.25 && normalized < 303.75) return 'Batı-Kuzeybatı';
+    if (normalized >= 303.75 && normalized < 326.25) return 'Kuzeybatı';
+    return 'Kuzey-Kuzeybatı';
   };
 
   const windLabel = getWindLabel(data.windDirection);

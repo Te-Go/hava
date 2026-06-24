@@ -289,11 +289,9 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       const prefs = getUserPreferences();
       const lastCity = localStorage.getItem('last_visited_city') || prefs.lastCity;
       if (prefs.consentStatus === 'accepted' && lastCity && toSlug(lastCity) !== 'istanbul') {
-        setCurrentCity(toSlug(lastCity));
-        window.history.replaceState({ city: lastCity }, '', `/hava-durumu/${toSlug(lastCity)}`);
+        window.location.replace(`/hava-durumu/${toSlug(lastCity)}`);
       } else {
-        setCurrentCity('istanbul');
-        window.history.replaceState({ city: 'istanbul' }, '', '/hava-durumu/istanbul');
+        window.location.replace('/hava-durumu/istanbul');
       }
     }
   }, []);

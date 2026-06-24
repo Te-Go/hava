@@ -9,11 +9,12 @@ export const openMeteoSchema = z.object({
     temperature_2m: z.number().catch(0),
     weather_code: z.number().catch(0),
     wind_speed_10m: z.number().catch(0),
+    wind_direction_10m: z.number().catch(0),
     relative_humidity_2m: z.number().catch(50),
     apparent_temperature: z.number().catch(0),
     surface_pressure: z.number().catch(1013),
   }).catch({
-    time: '', is_day: 1, temperature_2m: 0, weather_code: 0, wind_speed_10m: 0, relative_humidity_2m: 50, apparent_temperature: 0, surface_pressure: 1013
+    time: '', is_day: 1, temperature_2m: 0, weather_code: 0, wind_speed_10m: 0, wind_direction_10m: 0, relative_humidity_2m: 50, apparent_temperature: 0, surface_pressure: 1013
   }),
   hourly: z.object({
     time: z.array(z.string()).catch(['']),
@@ -57,7 +58,7 @@ export const sanitizeOpenMeteoPayload = (data: unknown) => {
     console.error("Root Failsafe Activated:", e);
     return {
       latitude: 0, longitude: 0,
-      current: { time: '', is_day: 1, temperature_2m: 0, weather_code: 0, wind_speed_10m: 0, relative_humidity_2m: 50, apparent_temperature: 0, surface_pressure: 1013 },
+      current: { time: '', is_day: 1, temperature_2m: 0, weather_code: 0, wind_speed_10m: 0, wind_direction_10m: 0, relative_humidity_2m: 50, apparent_temperature: 0, surface_pressure: 1013 },
       hourly: { time: [''], temperature_2m: [0], precipitation_probability: [0], precipitation: [0], weather_code: [0], is_day: [0], wind_speed_10m: [0], wind_direction_10m: [0], apparent_temperature: [0], relative_humidity_2m: [0], uv_index: [0], visibility: [0], surface_pressure: [0] },
       daily: { time: [''], weather_code: [0], temperature_2m_max: [0], temperature_2m_min: [0], precipitation_sum: [0], wind_speed_10m_max: [0], uv_index_max: [0], precipitation_probability_max: [0], apparent_temperature_max: [0], sunrise: [''], sunset: [''] }
     };

@@ -64,17 +64,25 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
         return mapping[s] ?? 0;
     };
 
-    // Translate degrees to reader-friendly Turkish heading texts
+    // Translate degrees to reader-friendly Turkish 16-point heading texts
     const getWindDirectionLabel = (deg: number): string => {
         const normalized = ((deg % 360) + 360) % 360;
-        if (normalized >= 337.5 || normalized < 22.5) return 'Kuzey';
-        if (normalized >= 22.5 && normalized < 67.5) return 'Kuzeydoğu';
-        if (normalized >= 67.5 && normalized < 112.5) return 'Doğu';
-        if (normalized >= 112.5 && normalized < 157.5) return 'Güneydoğu';
-        if (normalized >= 157.5 && normalized < 202.5) return 'Güney';
-        if (normalized >= 202.5 && normalized < 247.5) return 'Güneybatı';
-        if (normalized >= 247.5 && normalized < 292.5) return 'Batı';
-        return 'Kuzeybatı';
+        if (normalized >= 348.75 || normalized < 11.25) return 'Kuzey';
+        if (normalized >= 11.25 && normalized < 33.75) return 'Kuzey-Kuzeydoğu';
+        if (normalized >= 33.75 && normalized < 56.25) return 'Kuzeydoğu';
+        if (normalized >= 56.25 && normalized < 78.75) return 'Doğu-Kuzeydoğu';
+        if (normalized >= 78.75 && normalized < 101.25) return 'Doğu';
+        if (normalized >= 101.25 && normalized < 123.75) return 'Doğu-Güneydoğu';
+        if (normalized >= 123.75 && normalized < 146.25) return 'Güneydoğu';
+        if (normalized >= 146.25 && normalized < 168.75) return 'Güney-Güneydoğu';
+        if (normalized >= 168.75 && normalized < 191.25) return 'Güney';
+        if (normalized >= 191.25 && normalized < 213.75) return 'Güney-Güneybatı';
+        if (normalized >= 213.75 && normalized < 236.25) return 'Güneybatı';
+        if (normalized >= 236.25 && normalized < 258.75) return 'Batı-Güneybatı';
+        if (normalized >= 258.75 && normalized < 281.25) return 'Batı';
+        if (normalized >= 281.25 && normalized < 303.75) return 'Batı-Kuzeybatı';
+        if (normalized >= 303.75 && normalized < 326.25) return 'Kuzeybatı';
+        return 'Kuzey-Kuzeybatı';
     };
 
     useEffect(() => {
@@ -149,9 +157,9 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                 mapRef.current = map;
 
                 // CartoDB International Track: Ensures clean romanized/Turkish baseline naming conventions natively
-                tileLayerRef.current = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+                tileLayerRef.current = L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=tr&x={x}&y={y}&z={z}', {
                     maxZoom: 18,
-                    attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+                    attribution: '&copy; Google Maps'
                 }).addTo(map);
 
                 const southWest = L.latLng(34.0, 24.0);
