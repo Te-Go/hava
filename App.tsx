@@ -124,6 +124,12 @@ const RESERVED_PATHS = [
 // and let the useEffect fetchData block correctly await and hydrate the payload.
 const INITIAL_WEATHER_DATA = null;
 
+const IS_INITIAL_ROOT_PATH = typeof window !== 'undefined' && (
+  window.location.pathname === '/' || 
+  window.location.pathname === '/hava-durumu' || 
+  window.location.pathname === '/hava-durumu/'
+);
+
 if (typeof window !== 'undefined') {
     console.log("Current Payload:", (window as any).SinanWeatherPayload);
 }
@@ -610,11 +616,9 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       try {
         const citySlug = toSlug(currentCity);
         const globalPayload = (window as any).SinanWeatherPayload;
-        const isRootPath = window.location.pathname === '/' || window.location.pathname === '/hava-durumu' || window.location.pathname === '/hava-durumu/';
-        
         // Strict Zero-Trust Gate: Never utilize server pre-render payloads on generic root paths.
         // Forces an instant full-width client-side API fetch for the home page on first paint.
-        if (!isRootPath && globalPayload && globalPayload.weatherData && toSlug(globalPayload.city) === citySlug) {
+        if (!IS_INITIAL_ROOT_PATH && globalPayload && globalPayload.weatherData && toSlug(globalPayload.city) === citySlug) {
           const safeWeatherData = await mapOpenMeteoToModel(citySlug, globalPayload.weatherData);
           setWeatherData(safeWeatherData);
           
