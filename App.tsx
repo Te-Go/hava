@@ -623,9 +623,12 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           const serverModules = globalPayload?.modules || payload?.modules;
           setModules({ showTraffic: true, showMarine: true, showSki: true, showAgri: true, ...(serverModules || {}) });
           
-          if (hasTrafficMonitoring(citySlug) || (safeWeatherData.coord?.lat && safeWeatherData.coord?.lon)) {
-             fetchTrafficData(citySlug, undefined, safeWeatherData.coord?.lat, safeWeatherData.coord?.lon).then(setTrafficData).catch(() => setTrafficData(null));
-          } else setTrafficData(null);
+          const currentLat = safeWeatherData?.coord?.lat || (window as any).SinanWeatherPayload?.weatherData?.latitude;
+          const currentLon = safeWeatherData?.coord?.lon || (window as any).SinanWeatherPayload?.weatherData?.longitude;
+          
+          fetchTrafficData(citySlug, currentLat, currentLon)
+            .then(setTrafficData)
+            .catch(() => setTrafficData(null));
 
           if (isCoastalCity(citySlug)) {
              fetchMarineData(citySlug).then(setMarineData).catch(() => setMarineData(null));
@@ -677,9 +680,12 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
             const serverModules = (typeof window !== 'undefined' && (window as any).SinanWeatherPayload?.modules) || payload?.modules;
             setModules({ showTraffic: true, showMarine: true, showSki: true, showAgri: true, ...(serverModules || {}) });
             
-            if (hasTrafficMonitoring(citySlug) || (newWeatherData.coord?.lat && newWeatherData.coord?.lon)) {
-               fetchTrafficData(citySlug, undefined, newWeatherData.coord?.lat, newWeatherData.coord?.lon).then(setTrafficData).catch(() => setTrafficData(null));
-            } else setTrafficData(null);
+            const currentLat = newWeatherData?.coord?.lat || (window as any).SinanWeatherPayload?.weatherData?.latitude;
+            const currentLon = newWeatherData?.coord?.lon || (window as any).SinanWeatherPayload?.weatherData?.longitude;
+            
+            fetchTrafficData(citySlug, currentLat, currentLon)
+              .then(setTrafficData)
+              .catch(() => setTrafficData(null));
 
             if (isCoastalCity(citySlug)) {
                fetchMarineData(citySlug).then(setMarineData).catch(() => setMarineData(null));
@@ -780,8 +786,12 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   }, [weatherData, view.type, currentCity, isManualTheme, loading]);
 
   const handleCityChange = (newCity: string) => {
-    const prettyName = fromSlug(newCity);
-    setCurrentCity(toSlug(newCity));
+    // Identify if input is an ASCII slug or a raw Turkish name to prevent character stripping
+    const isSlug = /^[a-z0-9-]+$/.test(newCity) && newCity === newCity.toLowerCase();
+    const prettyName = isSlug ? fromSlug(newCity) : newCity;
+    const citySlug = toSlug(prettyName);
+
+    setCurrentCity(citySlug);
 
     // Save to LocalStorage ONLY if consent is granted (KVKK Compliance)
     const prefs = getUserPreferences();
@@ -790,9 +800,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
       localStorage.setItem('last_visited_city', prettyName);
     }
 
-    const slug = toSlug(prettyName);
-    // SINAN SILO PROTOCOL: /hava-durumu/city/view
-    let path = `/hava-durumu/${slug}`;
+    let path = `/hava-durumu/${citySlug}`;
     if (view.type === 'tomorrow') path += '/yarin';
     else if (view.type === '15-days') path += '/15-gunluk';
 

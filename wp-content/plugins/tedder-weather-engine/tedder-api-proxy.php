@@ -270,29 +270,38 @@ class TedderAPIProxy {
         );
 
         if ( ! isset( $city_points[$cityKey] ) ) {
-            $lat = sanitize_text_field( $request->get_param( 'lat' ) );
-            $lon = sanitize_text_field( $request->get_param( 'lon' ) );
+            // Automated Geo-Coordinate Fallback for universal tracking across Turkey
+            $lat = isset($_GET['lat']) ? sanitize_text_field($_GET['lat']) : null;
+            $lon = isset($_GET['lon']) ? sanitize_text_field($_GET['lon']) : null;
+            
             if ( ! $lat || ! $lon ) {
-                return new WP_Error( 'invalid_city', 'City data or coordinates required.', array( 'status' => 400 ) );
+                return new WP_Error( 'invalid_city', 'City traffic monitoring is not configured for: ' . $city, array( 'status' => 404 ) );
             }
+            
             $flow_data = $this->fetch_tomtom_flow_direct( $lat, $lon );
             if ( is_wp_error( $flow_data ) ) { return $flow_data; }
             
-            $speed = round( $flow_data['flowSegmentData']['currentSpeed'] ?? 50 );
-            $freeFlow = round( $flow_data['flowSegmentData']['freeFlowSpeed'] ?? 50 );
-            $percent = max( 0, min( 100, round( ( 1 - ( $speed / $freeFlow ) ) * 100 ) ) );
+            $speed = isset( $flow_data['flowSegmentData']['currentSpeed'] ) ? round($flow_data['flowSegmentData']['currentSpeed']) : 50;
+            $freeFlow = isset( $flow_data['flowSegmentData']['freeFlowSpeed'] ) ? round($flow_data['flowSegmentData']['freeFlowSpeed']) : 50;
+            $percent = $freeFlow > 0 ? max( 0, min( 100, round( ( 1 - ( $speed / $freeFlow ) ) * 100 ) ) ) : 0;
+            
+            $level = $percent > 50 ? 'severe' : ($percent > 35 ? 'high' : ($percent > 15 ? 'medium' : 'low'));
             
             return array(
-                'city' => $city,
-                'currentSpeed' => $speed,
-                'freeFlowSpeed' => $freeFlow,
-                'congestionLevel' => $percent > 50 ? 'severe' : ($percent > 35 ? 'high' : ($percent > 15 ? 'medium' : 'low')),
-                'congestionPercent' => $percent,
-                'mainRoutes' => array(
-                    array('name' => 'Yakın Bağlantı Otoyolu (Canlı Akış)', 'delay' => $percent > 25 ? 6 : 0)
+                'city'               => $city,
+                'currentSpeed'       => $speed,
+                'freeFlowSpeed'      => $freeFlow,
+                'currentTravelTime'  => 0,
+                'freeFlowTravelTime' => 0,
+                'confidence'         => 0.9,
+                'roadClosure'        => false,
+                'congestionLevel'    => $level,
+                'congestionPercent'  => (int)$percent,
+                'mainRoutes'         => array(
+                    array('name' => 'Bölgesel Bağlantı Yolu (Canlı Akış)', 'delay' => $percent > 25 ? 4 : 0, 'status' => $percent > 40 ? 'congested' : 'normal')
                 ),
-                'narrative' => 'Bölgesel yol segmentleri üzerinde trafik akışı anlık koordinat verilerine göre işleniyor.',
-                'lastUpdated' => time() * 1000
+                'narrative'          => 'Bölgesel yol segmentleri üzerinde trafik akışı canlı koordinat verilerine göre işleniyor.',
+                'lastUpdated'        => time() * 1000
             );
         }
 

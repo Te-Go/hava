@@ -226,7 +226,6 @@ import { fetchWithCache } from './cacheService';
  */
 export async function fetchTrafficData(
     city: string,
-    apiKey?: string,
     lat?: number,
     lon?: number
 ): Promise<TomTomTrafficData | null> {
@@ -239,12 +238,8 @@ export async function fetchTrafficData(
         .replace(/ç/g, 'c');
 
     const points = CITY_TRAFFIC_POINTS[cityKey];
-    if ((!points || points.length === 0) && (!lat || !lon)) {
-        console.log(`TomTom: ${city} is not a monitored city and no fallback coords provided`);
-        return null;
-    }
 
-    const cacheKey = (lat && lon && (!points || points.length === 0))
+    const cacheKey = (lat !== undefined && lon !== undefined && (!points || points.length === 0))
         ? `traffic_v2_coords_${lat.toFixed(4)}_${lon.toFixed(4)}`
         : `traffic_v2_${cityKey}`;
 
@@ -255,7 +250,7 @@ export async function fetchTrafficData(
             console.log(`TomTom: Fetching traffic for ${city} via REST proxy`);
             try {
                 let url = `/wp-json/sinan/v1/traffic?city=${cityKey}`;
-                if (lat && lon) {
+                if (lat !== undefined && lon !== undefined) {
                     url += `&lat=${lat}&lon=${lon}`;
                 }
                 const response = await fetch(url);
