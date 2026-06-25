@@ -19,26 +19,64 @@ const CookieBanner: React.FC = () => {
       return () => clearTimeout(timer);
     }
 
+    // ⚡️ The Bridge Listener: Synchronizes the UI if Complianz status changes externally
+    const handleComplianzEvent = (e: any) => {
+      // Complianz passes the active choice status ('allow' or 'deny')
+      if (e.detail === 'allow') {
+        saveUserPreferences({ consentStatus: 'accepted' });
+      } else if (e.detail === 'deny') {
+        saveUserPreferences({ consentStatus: 'declined' });
+      }
+    };
+
+    // Listen for Complianz status change events fired at the document level
+    document.addEventListener('cmplz_status_change', handleComplianzEvent);
+
     // LISTENER: Allow Footer to re-open banner
     const handleShow = () => {
       setIsVisible(true);
       setIsClosing(false);
     };
     window.addEventListener('show_cookie_banner', handleShow);
-    return () => window.removeEventListener('show_cookie_banner', handleShow);
+
+    return () => {
+      window.removeEventListener('show_cookie_banner', handleShow);
+      document.removeEventListener('cmplz_status_change', handleComplianzEvent);
+    };
   }, []);
 
   const handleAccept = () => {
+    // 1. Update our internal platform state
     saveUserPreferences({ consentStatus: 'accepted' });
     trackEvent('cookie_consent', 'status', 'accepted');
-    // Dispatch event so App.tsx knows immediately to init analytics
     window.dispatchEvent(new Event('cookie_consent_updated'));
+
+    // 2. ⚡️ Fire the Complianz Plugin Hook
+    if (typeof window !== 'undefined' && (window as any).cmplz_accept_all) {
+      try {
+        (window as any).cmplz_accept_all();
+      } catch (e) {
+        console.warn("Complianz acceptAll failed", e);
+      }
+    }
+
     closeBanner();
   };
 
   const handleDecline = () => {
+    // 1. Update our internal platform state
     saveUserPreferences({ consentStatus: 'declined' });
     trackEvent('cookie_consent', 'status', 'declined');
+
+    // 2. ⚡️ Fire the Complianz Plugin Hook
+    if (typeof window !== 'undefined' && (window as any).cmplz_deny) {
+      try {
+        (window as any).cmplz_deny();
+      } catch (e) {
+        console.warn("Complianz deny failed", e);
+      }
+    }
+
     closeBanner();
   };
 

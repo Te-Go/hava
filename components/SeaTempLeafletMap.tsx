@@ -107,6 +107,7 @@ const SeaTempLeafletMap: React.FC<SeaTempLeafletMapProps> = ({ locations, onLoca
                             ${location.swimSafety === 'safe' ? '✅ Yüzmeye Uygun' :
                         location.swimSafety === 'caution' ? '⚠️ Dikkatli Olun' :
                             '🚫 Tehlikeli'}
+                            ${location.warningReason ? `<br/><span style="font-size: 9px; color: #ef4444; font-weight: 500;">${location.warningReason}</span>` : ''}
                         </div>
                     </div>
                 `;

@@ -34,12 +34,12 @@ export interface TomTomTrafficData {
 const CITY_TRAFFIC_POINTS: Record<string, Array<{ name: string; lat: number; lon: number }>> = {
     // ===== TOP 10 =====
     istanbul: [
-        { name: 'E-5 (Bakırköy)', lat: 40.9867, lon: 28.8508 },
-        { name: 'FSM Köprüsü', lat: 41.0917, lon: 29.0678 },
-        { name: 'D-100 (Kartal)', lat: 40.8922, lon: 29.1967 },
-        { name: '15 Temmuz Köprüsü', lat: 41.0458, lon: 29.0342 },
-        { name: 'TEM (Seyrantepe)', lat: 41.1064, lon: 28.9925 },
-        { name: 'Haliç Köprüsü', lat: 41.0342, lon: 28.9692 },
+        { name: 'E-5 (Bakırköy) - Topkapı Yönü', lat: 40.9867, lon: 28.8508 },
+        { name: 'FSM Köprüsü - Avrupa Yakası Yönü', lat: 41.0917, lon: 29.0678 },
+        { name: 'D-100 (Kartal) - Kadıköy Yönü', lat: 40.8922, lon: 29.1967 },
+        { name: '15 Temmuz Köprüsü - Avrupa Yakası Yönü', lat: 41.0458, lon: 29.0342 },
+        { name: 'TEM (Seyrantepe) - Ankara Yönü', lat: 41.1064, lon: 28.9925 },
+        { name: 'Haliç Köprüsü - Mecidiyeköy Yönü', lat: 41.0342, lon: 28.9692 },
     ],
     ankara: [
         { name: 'Eskişehir Yolu', lat: 39.9167, lon: 32.7833 },
@@ -221,7 +221,9 @@ import { fetchWithCache } from './cacheService';
  */
 export async function fetchTrafficData(
     city: string,
-    apiKey?: string
+    apiKey?: string,
+    lat?: number,
+    lon?: number
 ): Promise<TomTomTrafficData | null> {
     const cityKey = city.toLowerCase()
         .replace(/ı/g, 'i')
@@ -232,18 +234,25 @@ export async function fetchTrafficData(
         .replace(/ç/g, 'c');
 
     const points = CITY_TRAFFIC_POINTS[cityKey];
-    if (!points || points.length === 0) {
-        console.log(`TomTom: ${city} is not a monitored city`);
+    if ((!points || points.length === 0) && (!lat || !lon)) {
+        console.log(`TomTom: ${city} is not a monitored city and no fallback coords provided`);
         return null;
     }
 
+    const cacheKey = (lat && lon && (!points || points.length === 0))
+        ? `traffic_v2_coords_${lat.toFixed(4)}_${lon.toFixed(4)}`
+        : `traffic_v2_${cityKey}`;
+
     // CACHE WRAPPER: 15 Minutes (Balance freshness vs Cost)
     return fetchWithCache(
-        `traffic_v2_${cityKey}`,
+        cacheKey,
         async () => {
             console.log(`TomTom: Fetching traffic for ${city} via REST proxy`);
             try {
-                const url = `/wp-json/sinan/v1/traffic?city=${cityKey}`;
+                let url = `/wp-json/sinan/v1/traffic?city=${cityKey}`;
+                if (lat && lon && (!points || points.length === 0)) {
+                    url += `&lat=${lat}&lon=${lon}`;
+                }
                 const response = await fetch(url);
                 if (!response.ok) {
                     console.error(`TomTom REST proxy error: ${response.status}`);

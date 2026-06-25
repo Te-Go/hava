@@ -239,3 +239,13 @@ body.page .site-content {
     margin-left: -50vw;
     margin-right: -50vw;
 }
+
+/* Purge native Complianz layout visibility while keeping backend script blocking active */
+#cmplz-cookiebanner, 
+.cmplz-cookiebanner,
+#cmplz-manage-consent {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+}

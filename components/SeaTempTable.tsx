@@ -174,7 +174,14 @@ const SeaTempTable: React.FC<SeaTempTableProps> = ({ locations, onLocationClick 
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-center">
-                                        {getSwimSafetyBadge(location.swimSafety)}
+                                        <div className="flex flex-col items-center justify-center gap-1">
+                                            <div>{getSwimSafetyBadge(location.swimSafety)}</div>
+                                            {location.warningReason && (
+                                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-none">
+                                                    {location.warningReason}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))

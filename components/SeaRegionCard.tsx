@@ -93,7 +93,14 @@ const SeaRegionCard: React.FC<SeaRegionCardProps> = ({ region, locations, onLoca
                                         <div className="text-xs text-slate-500 dark:text-slate-400">
                                             🌊 {location.waveHeight}m
                                         </div>
-                                        {getSwimSafetyBadge(location.swimSafety)}
+                                        <div>
+                                            {getSwimSafetyBadge(location.swimSafety)}
+                                        </div>
+                                        {location.warningReason && (
+                                            <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium leading-tight">
+                                                {location.warningReason}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

@@ -19,6 +19,7 @@ export interface MarineData {
     windWaveHeight: number;    // Wind-driven wave height (m)
     ferryStatus: 'normal' | 'delayed' | 'cancelled';  // Derived from conditions
     swimSafety: 'safe' | 'caution' | 'dangerous';     // Derived from conditions
+    warningReason?: string;
     lastUpdated: number;
 }
 
@@ -178,7 +179,9 @@ export async function fetchMarineData(city: string): Promise<MarineData | null> 
             const ferryStatus = deriveFerryStatus(waveHeight);
 
             // Derive swim safety from conditions
-            const swimSafety = deriveSwimSafety(waveHeight, seaTemp);
+            const safetyInfo = deriveSwimSafety(waveHeight, seaTemp);
+            const swimSafety = safetyInfo.safety;
+            const warningReason = safetyInfo.reason;
 
             console.log(`Marine API: Success for ${city} - SeaTemp: ${seaTemp}°C, Waves: ${waveHeight}m`);
 
@@ -191,6 +194,7 @@ export async function fetchMarineData(city: string): Promise<MarineData | null> 
                 windWaveHeight: Math.round((current?.wind_wave_height || 0) * 10) / 10,
                 ferryStatus,
                 swimSafety,
+                warningReason,
                 lastUpdated: Date.now()
             };
         },
@@ -212,15 +216,22 @@ function deriveFerryStatus(waveHeight: number): 'normal' | 'delayed' | 'cancelle
 /**
  * Derive swimming safety from conditions
  */
-function deriveSwimSafety(waveHeight: number, seaTemp: number): 'safe' | 'caution' | 'dangerous' {
-    // Safety based on waves
-    if (waveHeight >= 1.5) return 'dangerous';
-    if (waveHeight >= 0.8) return 'caution';
+function deriveSwimSafety(waveHeight: number, seaTemp: number): { safety: 'safe' | 'caution' | 'dangerous'; reason?: string } {
+    let warningReason = '';
+    let safety: 'safe' | 'caution' | 'dangerous' = 'safe';
 
-    // Temperature check
-    if (seaTemp < 16) return 'caution'; // Too cold
+    if (waveHeight >= 1.5) {
+        safety = 'dangerous';
+        warningReason = `Tehlikeli Dalga (${waveHeight}m)`;
+    } else if (waveHeight >= 0.8) {
+        safety = 'caution';
+        warningReason = `Yüksek Dalga (${waveHeight}m)`;
+    } else if (seaTemp < 16) {
+        safety = 'caution';
+        warningReason = `Düşük Sıcaklık (${seaTemp}°C)`;
+    }
 
-    return 'safe';
+    return { safety, reason: warningReason || undefined };
 }
 
 /**
@@ -324,6 +335,7 @@ export interface SeaTempLocation {
     seaTemp: number;
     waveHeight: number;
     swimSafety: 'safe' | 'caution' | 'dangerous';
+    warningReason?: string;
     ferryStatus: 'normal' | 'delayed' | 'cancelled';
 }
 
@@ -402,6 +414,8 @@ export async function fetchAllSeaTemperatures(): Promise<SeaTempLocation[]> {
             const seaTemp = data.hourly?.sea_surface_temperature?.[currentHour] ?? 18;
             const waveHeight = data.current?.wave_height ?? 0;
 
+            const safetyInfo = deriveSwimSafety(waveHeight, seaTemp);
+
             return {
                 city: cityKey,
                 displayName: getDisplayName(cityKey),
@@ -410,7 +424,8 @@ export async function fetchAllSeaTemperatures(): Promise<SeaTempLocation[]> {
                 lon: coords.lon,
                 seaTemp: Math.round(seaTemp * 10) / 10,
                 waveHeight: Math.round(waveHeight * 10) / 10,
-                swimSafety: deriveSwimSafety(waveHeight, seaTemp),
+                swimSafety: safetyInfo.safety,
+                warningReason: safetyInfo.reason,
                 ferryStatus: deriveFerryStatus(waveHeight)
             } as SeaTempLocation;
         } catch {

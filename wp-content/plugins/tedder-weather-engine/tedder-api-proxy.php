@@ -45,8 +45,11 @@ class TedderAPIProxy {
      */
     public function proxy_tomtom_traffic( $request ) {
         $city = sanitize_text_field( $request->get_param( 'city' ) );
+        $lat = sanitize_text_field( $request->get_param( 'lat' ) );
+        $lon = sanitize_text_field( $request->get_param( 'lon' ) );
+
         if ( ! empty( $city ) ) {
-            $city_data = $this->handle_tomtom_city_request( $city );
+            $city_data = $this->handle_tomtom_city_request( $city, $lat, $lon );
             if ( is_wp_error( $city_data ) ) {
                 return $city_data;
             }
@@ -55,14 +58,11 @@ class TedderAPIProxy {
             return $response;
         }
 
-        $lat = sanitize_text_field( $request->get_param( 'lat' ) );
-        $lon = sanitize_text_field( $request->get_param( 'lon' ) );
-
         if ( ! $lat || ! $lon ) {
             return new WP_Error( 'missing_params', 'City or Latitude/Longitude required', array( 'status' => 400 ) );
         }
 
-        $flow_data = $this->fetch_tomtom_flow_direct( $lat, $lon );
+        $flow_data = $this->handle_tomtom_coord_fallback( 'Bölge', $lat, $lon );
         if ( is_wp_error( $flow_data ) ) {
             return $flow_data;
         }
@@ -105,7 +105,7 @@ class TedderAPIProxy {
         return json_decode( $cached_data, true );
     }
 
-    private function handle_tomtom_city_request( $city ) {
+    private function handle_tomtom_city_request( $city, $fallback_lat = null, $fallback_lon = null ) {
         $cityKey = strtolower( $city );
         $cityKey = str_replace(
             array('ı', 'ş', 'ğ', 'ü', 'ö', 'ç', 'İ', 'Ş', 'Ğ', 'Ü', 'Ö', 'Ç'),
@@ -121,12 +121,12 @@ class TedderAPIProxy {
 
         $city_points = array(
             'istanbul' => array(
-                array('name' => 'E-5 (Bakırköy)', 'lat' => 40.9867, 'lon' => 28.8508),
-                array('name' => 'FSM Köprüsü', 'lat' => 41.0917, 'lon' => 29.0678),
-                array('name' => 'D-100 (Kartal)', 'lat' => 40.8922, 'lon' => 29.1967),
-                array('name' => '15 Temmuz Köprüsü', 'lat' => 41.0458, 'lon' => 29.0342),
-                array('name' => 'TEM (Seyrantepe)', 'lat' => 41.1064, 'lon' => 28.9925),
-                array('name' => 'Haliç Köprüsü', 'lat' => 41.0342, 'lon' => 28.9692),
+                array('name' => 'E-5 (Bakırköy) - Topkapı Yönü', 'lat' => 40.9867, 'lon' => 28.8508),
+                array('name' => 'FSM Köprüsü - Avrupa Yakası Yönü', 'lat' => 41.0917, 'lon' => 29.0678),
+                array('name' => 'D-100 (Kartal) - Kadıköy Yönü', 'lat' => 40.8922, 'lon' => 29.1967),
+                array('name' => '15 Temmuz Köprüsü - Avrupa Yakası Yönü', 'lat' => 41.0458, 'lon' => 29.0342),
+                array('name' => 'TEM (Seyrantepe) - Ankara Yönü', 'lat' => 41.1064, 'lon' => 28.9925),
+                array('name' => 'Haliç Köprüsü - Mecidiyeköy Yönü', 'lat' => 41.0342, 'lon' => 28.9692),
             ),
             'ankara' => array(
                 array('name' => 'Eskişehir Yolu', 'lat' => 39.9167, 'lon' => 32.7833),
@@ -248,6 +248,9 @@ class TedderAPIProxy {
         );
 
         if ( ! isset( $city_points[$cityKey] ) ) {
+            if ( ! empty( $fallback_lat ) && ! empty( $fallback_lon ) ) {
+                return $this->handle_tomtom_coord_fallback( $city, $fallback_lat, $fallback_lon );
+            }
             return new WP_Error( 'invalid_city', 'City traffic monitoring is not configured for: ' . $city, array( 'status' => 404 ) );
         }
 
@@ -361,6 +364,78 @@ class TedderAPIProxy {
         set_transient( $cache_key, json_encode( $compiled_data ), 300 );
 
         return $compiled_data;
+    }
+
+    private function handle_tomtom_coord_fallback( $city, $lat, $lon ) {
+        $flow = $this->fetch_tomtom_flow_direct( $lat, $lon );
+        if ( is_wp_error( $flow ) || ! isset( $flow['flowSegmentData'] ) ) {
+            return new WP_Error( 'no_traffic_data', 'No valid traffic data could be fetched for these coordinates', array( 'status' => 502 ) );
+        }
+
+        $data = $flow['flowSegmentData'];
+        $currentSpeed = isset( $data['currentSpeed'] ) ? $data['currentSpeed'] : 0;
+        $freeFlowSpeed = isset( $data['freeFlowSpeed'] ) ? $data['freeFlowSpeed'] : 50;
+        $currentTravelTime = isset( $data['currentTravelTime'] ) ? $data['currentTravelTime'] : 0;
+        $freeFlowTravelTime = isset( $data['freeFlowTravelTime'] ) ? $data['freeFlowTravelTime'] : 0;
+
+        $delaySeconds = $currentTravelTime - $freeFlowTravelTime;
+        $delayMinutes = max( 0, round( $delaySeconds / 60 ) );
+
+        $speedRatio = $freeFlowSpeed > 0 ? $currentSpeed / $freeFlowSpeed : 1;
+        $status = 'normal';
+        if ( $speedRatio < 0.3 ) {
+            $status = 'congested';
+        } elseif ( $speedRatio < 0.6 ) {
+            $status = 'slow';
+        }
+
+        $congestionPercent = round( ( 1 - $speedRatio ) * 100 );
+        $congestionPercent = max( 0, min( 100, $congestionPercent ) );
+
+        $congestionLevel = 'low';
+        if ( $speedRatio >= 0.75 ) {
+            $congestionLevel = 'low';
+        } elseif ( $speedRatio >= 0.5 ) {
+            $congestionLevel = 'medium';
+        } elseif ( $speedRatio >= 0.25 ) {
+            $congestionLevel = 'high';
+        } else {
+            $congestionLevel = 'severe';
+        }
+
+        $levelDescriptions = array(
+            'low'    => 'akıcı',
+            'medium' => 'yoğun',
+            'high'   => 'çok yoğun',
+            'severe' => 'kilitli durumda'
+        );
+
+        $displayCity = ucfirst( $city );
+        $narrative = $displayCity . ' bölgesi trafiği ' . $levelDescriptions[$congestionLevel] . '.';
+        if ( $delayMinutes > 5 ) {
+            $narrative .= ' Bu güzergahta ' . $delayMinutes . ' dakika gecikme var.';
+        }
+
+        return array(
+            'city'               => $city,
+            'currentSpeed'       => round( $currentSpeed ),
+            'freeFlowSpeed'      => round( $freeFlowSpeed ),
+            'currentTravelTime'  => (int)$currentTravelTime,
+            'freeFlowTravelTime' => (int)$freeFlowTravelTime,
+            'confidence'         => isset( $data['confidence'] ) ? $data['confidence'] : 0.9,
+            'roadClosure'        => isset( $data['roadClosure'] ) ? (bool)$data['roadClosure'] : false,
+            'congestionLevel'    => $congestionLevel,
+            'congestionPercent'  => (int)$congestionPercent,
+            'mainRoutes'         => array(
+                array(
+                    'name'   => 'Yakın Yol Segmenti',
+                    'delay'  => (int)$delayMinutes,
+                    'status' => $status
+                )
+            ),
+            'narrative'          => $narrative,
+            'lastUpdated'        => time() * 1000
+        );
     }
 
     /**
