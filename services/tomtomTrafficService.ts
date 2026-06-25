@@ -250,7 +250,7 @@ export async function fetchTrafficData(
             console.log(`TomTom: Fetching traffic for ${city} via REST proxy`);
             try {
                 let url = `/wp-json/sinan/v1/traffic?city=${cityKey}`;
-                if (lat && lon && (!points || points.length === 0)) {
+                if (lat && lon) {
                     url += `&lat=${lat}&lon=${lon}`;
                 }
                 const response = await fetch(url);

@@ -149,7 +149,7 @@ const MAX_SLUG_LENGTH = 100;
 
 export const toSlug = (text: string): string => {
   if (!text || typeof text !== 'string') return '';
-  return text.slice(0, MAX_SLUG_LENGTH).trim()
+  return text.normalize('NFC').trim()
     .replace(/İ/g, 'i').replace(/I/g, 'i').replace(/ı/g, 'i')
     .replace(/Ş/g, 's').replace(/ş/g, 's')
     .replace(/Ğ/g, 'g').replace(/ğ/g, 'g')

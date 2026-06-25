@@ -623,10 +623,8 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           const serverModules = globalPayload?.modules || payload?.modules;
           setModules({ showTraffic: true, showMarine: true, showSki: true, showAgri: true, ...(serverModules || {}) });
           
-          if (hasTrafficMonitoring(citySlug)) {
-             fetchTrafficData(citySlug).then(setTrafficData).catch(() => setTrafficData(null));
-          } else if (safeWeatherData.coord?.lat && safeWeatherData.coord?.lon) {
-             fetchTrafficData(citySlug, undefined, safeWeatherData.coord.lat, safeWeatherData.coord.lon).then(setTrafficData).catch(() => setTrafficData(null));
+          if (hasTrafficMonitoring(citySlug) || (safeWeatherData.coord?.lat && safeWeatherData.coord?.lon)) {
+             fetchTrafficData(citySlug, undefined, safeWeatherData.coord?.lat, safeWeatherData.coord?.lon).then(setTrafficData).catch(() => setTrafficData(null));
           } else setTrafficData(null);
 
           if (isCoastalCity(citySlug)) {
@@ -679,10 +677,8 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
             const serverModules = (typeof window !== 'undefined' && (window as any).SinanWeatherPayload?.modules) || payload?.modules;
             setModules({ showTraffic: true, showMarine: true, showSki: true, showAgri: true, ...(serverModules || {}) });
             
-            if (hasTrafficMonitoring(citySlug)) {
-               fetchTrafficData(citySlug).then(setTrafficData).catch(() => setTrafficData(null));
-            } else if (newWeatherData.coord?.lat && newWeatherData.coord?.lon) {
-               fetchTrafficData(citySlug, undefined, newWeatherData.coord.lat, newWeatherData.coord.lon).then(setTrafficData).catch(() => setTrafficData(null));
+            if (hasTrafficMonitoring(citySlug) || (newWeatherData.coord?.lat && newWeatherData.coord?.lon)) {
+               fetchTrafficData(citySlug, undefined, newWeatherData.coord?.lat, newWeatherData.coord?.lon).then(setTrafficData).catch(() => setTrafficData(null));
             } else setTrafficData(null);
 
             if (isCoastalCity(citySlug)) {
