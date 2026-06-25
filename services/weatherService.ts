@@ -171,11 +171,16 @@ export const toSlug = (text: string): string => {
 };
 
 export const fromSlug = (slug: string): string => {
-  // Security: Validate input
   if (!slug || typeof slug !== 'string') return 'İstanbul';
 
-  // Security: Limit length and strip dangerous characters
-  const sanitized = slug.slice(0, MAX_SLUG_LENGTH).replace(/[^a-z0-9-]/gi, '').toLowerCase();
+  // Defensive Bypass: If string already contains uppercase characters or Turkish diacritics, return as-is
+  if (/[A-ZÇĞİÖŞÜışğçöü]/.test(slug)) return slug.trim();
+
+  // Secure Turkish-inclusive character mapping filter
+  const sanitized = slug
+    .slice(0, 100)
+    .replace(/[^a-z0-9\-çğıöşü]/gi, '')
+    .toLowerCase();
 
   // Comprehensive Turkish City Name Mappings (All 81 Provinces + Popular Districts)
   const TURKISH_NAMES: Record<string, string> = {

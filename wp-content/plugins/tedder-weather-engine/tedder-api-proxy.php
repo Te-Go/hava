@@ -92,7 +92,7 @@ class TedderAPIProxy {
     private function fetch_tomtom_flow_direct( $lat, $lon ) {
         $api_key = get_option( 'tedder_tomtom_api_key' );
         if ( empty( $api_key ) ) {
-            $api_key = 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5'; // Fallback key
+            $api_key = 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5';
         }
 
         $lat_r = round((float) $lat, 4);
@@ -101,7 +101,8 @@ class TedderAPIProxy {
         $cached_data = get_transient( $cache_key );
 
         if ( false === $cached_data ) {
-            $url = "https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?point={$lat},{$lon}&unit=KMPH&key={$api_key}";
+            // Enforce functionalRoadClass=0,1,2 to dynamically snap queries onto motorways and national arteries globally
+            $url = "https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?point={$lat},{$lon}&unit=KMPH&functionalRoadClass=0,1,2&key={$api_key}";
             $response = wp_remote_get( $url, array( 'timeout' => 10 ) );
 
             if ( is_wp_error( $response ) ) {
