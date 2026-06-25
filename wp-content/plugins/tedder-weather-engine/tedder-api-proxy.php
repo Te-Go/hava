@@ -262,6 +262,11 @@ class TedderAPIProxy {
             'fethiye' => array(
                 array('name' => 'Ölüdeniz Yolu', 'lat' => 36.6538, 'lon' => 29.1236),
             ),
+            'belek' => array(
+                array('name' => 'Turizm Caddesi - Oteller Bölgesi', 'lat' => 36.8625, 'lon' => 31.0556),
+                array('name' => 'Belek Caddesi - Merkez Yönü', 'lat' => 36.8640, 'lon' => 31.0490),
+                array('name' => 'D-400 Serik-Belek Bağlantısı', 'lat' => 36.9150, 'lon' => 31.0620)
+            ),
         );
 
         if ( ! isset( $city_points[$cityKey] ) ) {

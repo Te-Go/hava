@@ -152,6 +152,11 @@ const CITY_TRAFFIC_POINTS: Record<string, Array<{ name: string; lat: number; lon
     ],
 
     // ===== TOURIST TOWNS (bonus) =====
+    belek: [
+        { name: 'Turizm Caddesi - Oteller Bölgesi', lat: 36.8625, lon: 31.0556 },
+        { name: 'Belek Caddesi - Merkez Yönü', lat: 36.8640, lon: 31.0490 },
+        { name: 'D-400 Serik-Belek Bağlantısı', lat: 36.9150, lon: 31.0620 }
+    ],
     alanya: [
         { name: 'D-400 Kaleiçi', lat: 36.5400, lon: 32.0000 },
     ],

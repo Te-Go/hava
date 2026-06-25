@@ -149,16 +149,25 @@ const MAX_SLUG_LENGTH = 100;
 
 export const toSlug = (text: string): string => {
   if (!text || typeof text !== 'string') return '';
-  return text.normalize('NFC').trim()
-    .replace(/İ/g, 'i').replace(/I/g, 'i').replace(/ı/g, 'i')
-    .replace(/Ş/g, 's').replace(/ş/g, 's')
-    .replace(/Ğ/g, 'g').replace(/ğ/g, 'g')
-    .replace(/Ç/g, 'c').replace(/ç/g, 'c')
-    .replace(/Ö/g, 'o').replace(/ö/g, 'o')
-    .replace(/Ü/g, 'u').replace(/ü/g, 'u')
+  return text
+    .normalize('NFC')
+    .replace(/İ/g, 'i')
+    .replace(/I/g, 'ı')
+    .replace(/Ş/g, 'ş')
+    .replace(/Ğ/g, 'ğ')
+    .replace(/Ç/g, 'ç')
+    .replace(/Ö/g, 'ö')
+    .replace(/Ü/g, 'ü')
     .toLowerCase()
+    .replace(/ı/g, 'i')
+    .replace(/ş/g, 's')
+    .replace(/ğ/g, 'g')
+    .replace(/ç/g, 'c')
+    .replace(/ö/g, 'o')
+    .replace(/ü/g, 'u')
     .replace(/[^a-z0-9\-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/^-+|-+$/g, '')
+    .slice(0, MAX_SLUG_LENGTH);
 };
 
 export const fromSlug = (slug: string): string => {
