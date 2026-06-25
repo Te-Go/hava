@@ -788,28 +788,34 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   const handleCityChange = (newCity: string) => {
     if (!newCity) return;
     
-    // Identify if input is an ASCII slug or a raw Turkish name to prevent character stripping
-    const isSlug = /^[a-z0-9-]+$/.test(newCity) && newCity === newCity.toLowerCase();
-    const prettyName = isSlug ? fromSlug(newCity) : newCity;
-    const citySlug = toSlug(prettyName);
+    // Pristine Identity Preservation: Clean spacing but preserve raw Turkish character casings
+    let rawInputName = newCity.trim();
+    
+    // Direct mapping override overrides to protect root state edge cases from sub-method degradation
+    if (rawInputName.toLowerCase() === 'igdir' || rawInputName.toLowerCase() === 'idr') rawInputName = 'Iğdır';
+    if (rawInputName.toLowerCase() === 'sanliurfa' || rawInputName.toLowerCase() === 'anlurfa') rawInputName = 'Şanlıurfa';
+
+    const isSlugFormat = /^[a-z0-9-]+$/.test(rawInputName) && rawInputName === rawInputName.toLowerCase();
+    const cleanDisplayCity = isSlugFormat ? fromSlug(rawInputName) : rawInputName;
+    const citySlug = toSlug(cleanDisplayCity);
 
     setCurrentCity(citySlug);
     setParentCity(null);
 
-    // Save to LocalStorage ONLY if consent is granted (KVKK Compliance)
+    // Sync with Local Preferences under KVKK Compliance bounds
     const prefs = getUserPreferences();
     if (prefs.consentStatus === 'accepted') {
-      saveUserPreferences({ lastCity: prettyName });
-      localStorage.setItem('last_visited_city', prettyName);
+      saveUserPreferences({ lastCity: cleanDisplayCity });
+      localStorage.setItem('last_visited_city', cleanDisplayCity);
     }
 
     let path = `/hava-durumu/${citySlug}`;
     if (view.type === 'tomorrow') path += '/yarin';
     else if (view.type === '15-days') path += '/15-gunluk';
 
-    window.history.pushState({ city: prettyName }, '', path);
-    trackEvent('change_city', 'navigation', prettyName);
-
+    window.history.pushState({ city: cleanDisplayCity }, '', path);
+    trackEvent('change_city', 'navigation', cleanDisplayCity);
+    
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'auto' });
     }, 200);

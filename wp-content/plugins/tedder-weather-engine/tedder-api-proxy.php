@@ -268,8 +268,10 @@ class TedderAPIProxy {
         );
 
         if ( ! isset( $city_points[$cityKey] ) ) {
+            $lat = isset($_GET['lat']) ? sanitize_text_field($_GET['lat']) : null;
+            $lon = isset($_GET['lon']) ? sanitize_text_field($_GET['lon']) : null;
             if ( ! $lat || ! $lon ) {
-                return new WP_Error( 'invalid_city', 'City traffic monitoring is not configured for: ' . $city, array( 'status' => 404 ) );
+                return new WP_Error( 'invalid_city', 'Coordinates missing for fallback evaluation.', array( 'status' => 400 ) );
             }
             
             $flow_data = $this->fetch_tomtom_flow_direct( $lat, $lon );
@@ -278,24 +280,31 @@ class TedderAPIProxy {
             $api_key = get_option( 'tedder_tomtom_api_key' );
             if ( empty( $api_key ) ) { $api_key = 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5'; }
             
-            // Query TomTom Reverse Geocoding API to resolve exact, live road names anywhere in Turkey
-            $roadName = 'Bölgesel Bağlantı Yolu';
+            // Query TomTom Reverse Geocoding API to resolve exact, live addressing tracks anywhere in Turkey
+            $roadName = '';
             $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/{$lat},{$lon}.json?key={$api_key}";
             $geocode_response = wp_remote_get( $geocode_url, array( 'timeout' => 5 ) );
+            
             if ( ! is_wp_error( $geocode_response ) ) {
                 $geocode_body = wp_remote_retrieve_body( $geocode_response );
                 $geocode_json = json_decode( $geocode_body, true );
-                if ( isset( $geocode_json['addresses'][0]['address']['streetName'] ) ) {
+                if ( isset( $geocode_json['addresses'][0]['address']['streetName'] ) && ! empty( $geocode_json['addresses'][0]['address']['streetName'] ) ) {
                     $roadName = $geocode_json['addresses'][0]['address']['streetName'];
-                } elseif ( isset( $geocode_json['addresses'][0]['address']['freeformAddress'] ) ) {
-                    $roadName = $geocode_json['addresses'][0]['address']['freeformAddress'];
+                } elseif ( isset( $geocode_json['addresses'][0]['address']['freeformAddress'] ) && ! empty( $geocode_json['addresses'][0]['address']['freeformAddress'] ) ) {
+                    // Fallback to freeform formatting splits if literal streetName is empty
+                    $addressParts = explode(',', $geocode_json['addresses'][0]['address']['freeformAddress']);
+                    $roadName = trim($addressParts[0]);
                 }
+            }
+            
+            // If TomTom provides no addressing string text context, dynamically derive an adaptive descriptor using the location name
+            if ( empty( $roadName ) || $roadName === 'Bölgesel Yol Segmenti' ) {
+                $roadName = ucfirst($city) . ' Çevresi Ana Arter';
             }
 
             $speed = isset( $flow_data['flowSegmentData']['currentSpeed'] ) ? round($flow_data['flowSegmentData']['currentSpeed']) : 50;
             $freeFlow = isset( $flow_data['flowSegmentData']['freeFlowSpeed'] ) ? round($flow_data['flowSegmentData']['freeFlowSpeed']) : 50;
             $percent = $freeFlow > 0 ? max( 0, min( 100, round( ( 1 - ( $speed / $freeFlow ) ) * 100 ) ) ) : 0;
-            
             $level = $percent > 50 ? 'severe' : ($percent > 35 ? 'high' : ($percent > 15 ? 'medium' : 'low'));
             $levelDescriptions = array('low' => 'akıcı', 'medium' => 'yoğun', 'high' => 'çok yoğun', 'severe' => 'kilitli');
             
@@ -312,7 +321,7 @@ class TedderAPIProxy {
                 'mainRoutes'         => array(
                     array('name' => $roadName . ' (Canlı Akış)', 'delay' => $percent > 25 ? 4 : 0, 'status' => $percent > 40 ? 'congested' : 'normal')
                 ),
-                'narrative'          => ucfirst($city) . ' trafiği ' . $levelDescriptions[$level] . '.',
+                'narrative'          => ucfirst($city) . ' ve çevresinde trafik akışı ' . $levelDescriptions[$level] . '.',
                 'lastUpdated'        => time() * 1000
             );
 

@@ -144,7 +144,7 @@ export const initAds = () => {
 };
 
 // --- UTILITIES ---
-// SECURITY: Input validation added for URL slug parsing
+// SECURITY: Input validation
 const MAX_SLUG_LENGTH = 100;
 
 export const toSlug = (text: string): string => {
@@ -158,7 +158,7 @@ export const toSlug = (text: string): string => {
     .replace(/Ç/g, 'ç')
     .replace(/Ö/g, 'ö')
     .replace(/Ü/g, 'ü')
-    .toLowerCase()
+    .toLocaleLowerCase('tr-TR')
     .replace(/ı/g, 'i')
     .replace(/ş/g, 's')
     .replace(/ğ/g, 'g')

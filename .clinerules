@@ -1,0 +1,7 @@
+# Persistent AI Developer Guardrails
+* **Zero-Trust Rule:** Never report a task or file update as complete without running a post-write `view_file` call to verify the characters are physically written to the drive.
+* **Active Path Restriction:** Only modify assets located inside the active `WeatherWebApp-main/...` path. Completely ignore all Desktop root backup duplicates.
+
+ACTION 1: Turkish characters and street names
+* **State Separation Law:** Never pass raw Turkish display strings through non-ASCII filtering regex lines. Keep Display identity and Routing slugs entirely isolated.
+* **Traffic Card Policy:** Every coordinate-based traffic fallback must return a descriptive local roadway tag. Never fall back onto generic static text strings like "Bölgesel Yol".
