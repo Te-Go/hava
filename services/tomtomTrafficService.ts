@@ -221,14 +221,7 @@ async function fetchTomTomFlowData(
  */
 import { fetchWithCache } from './cacheService';
 
-/**
- * Get traffic data for a city by sampling multiple points
- */
-export async function fetchTrafficData(
-    city: string,
-    lat?: number,
-    lon?: number
-): Promise<TomTomTrafficData | null> {
+export async function fetchTrafficData(city: string, lat?: number, lon?: number): Promise<TomTomTrafficData | null> {
     const cityKey = city.toLowerCase()
         .replace(/ı/g, 'i')
         .replace(/ş/g, 's')
@@ -237,34 +230,22 @@ export async function fetchTrafficData(
         .replace(/ö/g, 'o')
         .replace(/ç/g, 'c');
 
-    const points = CITY_TRAFFIC_POINTS[cityKey];
+    let url = `/wp-json/sinan/v1/traffic?city=${cityKey}`;
+    if (lat && lon) { url += `&lat=${lat}&lon=${lon}`; }
 
-    const cacheKey = (lat !== undefined && lon !== undefined && (!points || points.length === 0))
-        ? `traffic_v2_coords_${lat.toFixed(4)}_${lon.toFixed(4)}`
-        : `traffic_v2_${cityKey}`;
-
-    // CACHE WRAPPER: 15 Minutes (Balance freshness vs Cost)
     return fetchWithCache(
-        cacheKey,
+        `traffic_v2_${cityKey}`,
         async () => {
-            console.log(`TomTom: Fetching traffic for ${city} via REST proxy`);
             try {
-                let url = `/wp-json/sinan/v1/traffic?city=${cityKey}`;
-                if (lat !== undefined && lon !== undefined) {
-                    url += `&lat=${lat}&lon=${lon}`;
-                }
                 const response = await fetch(url);
-                if (!response.ok) {
-                    console.error(`TomTom REST proxy error: ${response.status}`);
-                    return null;
-                }
+                if (!response.ok) return null;
                 return await response.json();
             } catch (error) {
                 console.error('TomTom fetch failed:', error);
                 return null;
             }
         },
-        15 // 15 Min TTL
+        15
     );
 }
 

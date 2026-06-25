@@ -786,12 +786,15 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   }, [weatherData, view.type, currentCity, isManualTheme, loading]);
 
   const handleCityChange = (newCity: string) => {
+    if (!newCity) return;
+    
     // Identify if input is an ASCII slug or a raw Turkish name to prevent character stripping
     const isSlug = /^[a-z0-9-]+$/.test(newCity) && newCity === newCity.toLowerCase();
     const prettyName = isSlug ? fromSlug(newCity) : newCity;
     const citySlug = toSlug(prettyName);
 
     setCurrentCity(citySlug);
+    setParentCity(null);
 
     // Save to LocalStorage ONLY if consent is granted (KVKK Compliance)
     const prefs = getUserPreferences();

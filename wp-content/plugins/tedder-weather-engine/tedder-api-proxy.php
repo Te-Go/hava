@@ -49,7 +49,7 @@ class TedderAPIProxy {
         $lon = sanitize_text_field( $request->get_param( 'lon' ) );
 
         if ( ! empty( $city ) ) {
-            $city_data = $this->handle_tomtom_city_request( $city, $request );
+            $city_data = $this->handle_tomtom_city_request( $city, $lat, $lon );
             if ( is_wp_error( $city_data ) ) {
                 return $city_data;
             }
@@ -122,7 +122,7 @@ class TedderAPIProxy {
         return json_decode( $cached_data, true );
     }
 
-    private function handle_tomtom_city_request( $city, $request ) {
+    private function handle_tomtom_city_request( $city, $lat = null, $lon = null ) {
         $cityKey = strtolower( $city );
         $cityKey = str_replace(
             array('ı', 'ş', 'ğ', 'ü', 'ö', 'ç', 'İ', 'Ş', 'Ğ', 'Ü', 'Ö', 'Ç'),
@@ -132,9 +132,7 @@ class TedderAPIProxy {
 
         $cache_key = 'tedder_city_traffic_' . $cityKey;
         $cached = get_transient( $cache_key );
-        if ( $cached !== false ) {
-            return json_decode( $cached, true );
-        }
+        if ( $cached !== false ) { return json_decode( $cached, true ); }
 
         $city_points = array(
             'istanbul' => array(
@@ -270,10 +268,6 @@ class TedderAPIProxy {
         );
 
         if ( ! isset( $city_points[$cityKey] ) ) {
-            // Automated Geo-Coordinate Fallback for universal tracking across Turkey
-            $lat = isset($_GET['lat']) ? sanitize_text_field($_GET['lat']) : null;
-            $lon = isset($_GET['lon']) ? sanitize_text_field($_GET['lon']) : null;
-            
             if ( ! $lat || ! $lon ) {
                 return new WP_Error( 'invalid_city', 'City traffic monitoring is not configured for: ' . $city, array( 'status' => 404 ) );
             }
@@ -281,13 +275,31 @@ class TedderAPIProxy {
             $flow_data = $this->fetch_tomtom_flow_direct( $lat, $lon );
             if ( is_wp_error( $flow_data ) ) { return $flow_data; }
             
+            $api_key = get_option( 'tedder_tomtom_api_key' );
+            if ( empty( $api_key ) ) { $api_key = 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5'; }
+            
+            // Query TomTom Reverse Geocoding API to resolve exact, live road names anywhere in Turkey
+            $roadName = 'Bölgesel Bağlantı Yolu';
+            $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/{$lat},{$lon}.json?key={$api_key}";
+            $geocode_response = wp_remote_get( $geocode_url, array( 'timeout' => 5 ) );
+            if ( ! is_wp_error( $geocode_response ) ) {
+                $geocode_body = wp_remote_retrieve_body( $geocode_response );
+                $geocode_json = json_decode( $geocode_body, true );
+                if ( isset( $geocode_json['addresses'][0]['address']['streetName'] ) ) {
+                    $roadName = $geocode_json['addresses'][0]['address']['streetName'];
+                } elseif ( isset( $geocode_json['addresses'][0]['address']['freeformAddress'] ) ) {
+                    $roadName = $geocode_json['addresses'][0]['address']['freeformAddress'];
+                }
+            }
+
             $speed = isset( $flow_data['flowSegmentData']['currentSpeed'] ) ? round($flow_data['flowSegmentData']['currentSpeed']) : 50;
             $freeFlow = isset( $flow_data['flowSegmentData']['freeFlowSpeed'] ) ? round($flow_data['flowSegmentData']['freeFlowSpeed']) : 50;
             $percent = $freeFlow > 0 ? max( 0, min( 100, round( ( 1 - ( $speed / $freeFlow ) ) * 100 ) ) ) : 0;
             
             $level = $percent > 50 ? 'severe' : ($percent > 35 ? 'high' : ($percent > 15 ? 'medium' : 'low'));
+            $levelDescriptions = array('low' => 'akıcı', 'medium' => 'yoğun', 'high' => 'çok yoğun', 'severe' => 'kilitli');
             
-            return array(
+            $compiled_data = array(
                 'city'               => $city,
                 'currentSpeed'       => $speed,
                 'freeFlowSpeed'      => $freeFlow,
@@ -298,11 +310,14 @@ class TedderAPIProxy {
                 'congestionLevel'    => $level,
                 'congestionPercent'  => (int)$percent,
                 'mainRoutes'         => array(
-                    array('name' => 'Bölgesel Bağlantı Yolu (Canlı Akış)', 'delay' => $percent > 25 ? 4 : 0, 'status' => $percent > 40 ? 'congested' : 'normal')
+                    array('name' => $roadName . ' (Canlı Akış)', 'delay' => $percent > 25 ? 4 : 0, 'status' => $percent > 40 ? 'congested' : 'normal')
                 ),
-                'narrative'          => 'Bölgesel yol segmentleri üzerinde trafik akışı canlı koordinat verilerine göre işleniyor.',
+                'narrative'          => ucfirst($city) . ' trafiği ' . $levelDescriptions[$level] . '.',
                 'lastUpdated'        => time() * 1000
             );
+
+            set_transient( $cache_key, json_encode( $compiled_data ), 300 );
+            return $compiled_data;
         }
 
         $points = $city_points[$cityKey];
