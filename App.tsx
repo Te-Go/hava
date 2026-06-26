@@ -273,6 +273,18 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     console.warn('🔴 [DEBUG-MOUNT] Expected city from slug:', fromSlug(window.location.pathname.split('/').pop() || ''));
   }, []);
 
+  // SPA Search Event Listener
+  useEffect(() => {
+    const handleSpaSearch = (e: any) => {
+      const queryText = e.detail.query;
+      setView({ type: 'location-search' });
+      window.history.pushState({ search: queryText }, '', `/konum-ara?q=${encodeURIComponent(queryText)}`);
+    };
+
+    window.addEventListener('spa_search_redirect', handleSpaSearch);
+    return () => window.removeEventListener('spa_search_redirect', handleSpaSearch);
+  }, []);
+
   useEffect(() => {
     console.log('🔴 [STATE-CHANGE] currentCity is now:', currentCity);
   }, [currentCity]);
@@ -880,7 +892,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
               activeView={view.type}
             />
             {/* SINAN UX: District Rail - Positioned directly under City Rail for city→district flow */}
-            <LocalDistrictsGrid city={currentCity} view={view.type} />
+            <LocalDistrictsGrid city={parentCity || fromSlug(currentCity)} view={view.type} />
             {/* SEO Breadcrumb Navigation - Always Visible */}
             <SEOBreadcrumb cityName={currentCity} view={view.type} parentCity={parentCity || undefined} />
 

@@ -42,16 +42,18 @@ const Navigation: React.FC<NavigationProps> = ({ currentCity, onCityChange, onLo
         trackEvent('search_city', 'navigation', val);
         
         const slug = toSlug(val);
-        // Primary master provincial capital shortcuts
         const masterCities = ['istanbul', 'ankara', 'izmir', 'bursa', 'antalya', 'adana', 'konya', 'gaziantep', 'mersin', 'diyarbakir'];
         
         if (masterCities.includes(slug)) {
           onCityChange(slug);
           e.currentTarget.blur();
         } else {
-          // Force redirect directly to our multi-choice location search page
+          // Execute smooth SPA navigation to protect the application shell from WordPress 404 blocks
           e.currentTarget.blur();
-          window.location.href = `/konum-ara?q=${encodeURIComponent(val)}`;
+          
+          // ⚡️ Trigger custom event to notify App.tsx to switch views smoothly without refreshing the page
+          const searchEvent = new CustomEvent('spa_search_redirect', { detail: { query: val } });
+          window.dispatchEvent(searchEvent);
         }
       }
     }
