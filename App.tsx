@@ -481,16 +481,12 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     if (segments[0] === 'hava-durumu' && segments[1]) {
       const citySlug = segments[1];
       const nextSlug = segments[2];
-      console.log('[DEBUG] useEffect Parsing - City:', citySlug, 'Next:', nextSlug);
 
       if (nextSlug && nextSlug !== 'yarin' && nextSlug !== '15-gunluk' && nextSlug !== 'hafta-sonu') {
-        // District detected
-        console.log('[DEBUG] District detected in useEffect:', nextSlug);
-        setCurrentCity(fromSlug(nextSlug));
+        setCurrentCity(nextSlug); // ✅ Stored strictly as a clean slug string
         setParentCity(fromSlug(citySlug));
       } else if (citySlug !== 'yarin' && citySlug !== 'hafta-sonu') {
-        console.log('[DEBUG] City detected in useEffect:', citySlug);
-        setCurrentCity(fromSlug(citySlug));
+        setCurrentCity(citySlug); // ✅ Stored strictly as a clean slug string
         setParentCity(null);
       }
     } else {
@@ -522,16 +518,15 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
         setView({ type: 'home' });
       }
 
-      // SINAN SILO: Extract city and district
       if (pSegments[0] === 'hava-durumu' && pSegments[1]) {
         const pCitySlug = pSegments[1];
         const pNextSlug = pSegments[2];
 
         if (pNextSlug && pNextSlug !== 'yarin' && pNextSlug !== '15-gunluk' && pNextSlug !== 'hafta-sonu') {
-          setCurrentCity(fromSlug(pNextSlug));
+          setCurrentCity(pNextSlug); // ✅ Stored strictly as a clean slug string
           setParentCity(fromSlug(pCitySlug));
         } else if (pCitySlug !== 'yarin' && pCitySlug !== 'hafta-sonu') {
-          setCurrentCity(fromSlug(pCitySlug));
+          setCurrentCity(pCitySlug); // ✅ Stored strictly as a clean slug string
           setParentCity(null);
         }
       } else {
