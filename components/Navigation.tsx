@@ -41,12 +41,17 @@ const Navigation: React.FC<NavigationProps> = ({ currentCity, onCityChange, onLo
       if (val.length > 2) {
         trackEvent('search_city', 'navigation', val);
         
-        // Strict slugification for Turkish characters
-        const sanitizedSlug = toSlug(val);
-
-        if (sanitizedSlug) {
-          onCityChange(sanitizedSlug);
+        const slug = toSlug(val);
+        // Primary master provincial capital shortcuts
+        const masterCities = ['istanbul', 'ankara', 'izmir', 'bursa', 'antalya', 'adana', 'konya', 'gaziantep', 'mersin', 'diyarbakir'];
+        
+        if (masterCities.includes(slug)) {
+          onCityChange(slug);
           e.currentTarget.blur();
+        } else {
+          // Force redirect directly to our multi-choice location search page
+          e.currentTarget.blur();
+          window.location.href = `/konum-ara?q=${encodeURIComponent(val)}`;
         }
       }
     }

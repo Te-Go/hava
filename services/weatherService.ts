@@ -300,11 +300,10 @@ export interface GeoSearchResult {
 
 export const searchLocations = async (query: string): Promise<GeoSearchResult[]> => {
   try {
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=tr&format=json`;
+    const url = `/wp-json/sinan/v1/geocode?q=${encodeURIComponent(query)}`;
     const res = await fetch(url);
     const data = await res.json();
     if (data.results && data.results.length > 0) {
-      // Filter to Turkey only for this app
       return data.results
         .filter((r: { country_code: string }) => r.country_code === 'TR')
         .map((r: { name: string; admin1?: string; latitude: number; longitude: number; country: string }) => ({
@@ -315,7 +314,7 @@ export const searchLocations = async (query: string): Promise<GeoSearchResult[]>
           country: r.country
         }));
     }
-  } catch (e) { console.error('Geocoding search error:', e); }
+  } catch (e) { console.error('Geocoding proxy search error:', e); }
   return [];
 };
 

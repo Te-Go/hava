@@ -38,6 +38,13 @@ class TedderAPIProxy {
             'callback' => array( $this, 'proxy_rainviewer_radar' ),
             'permission_callback' => '__return_true'
         ));
+
+        // Geocoding Proxy Route - 30 Day Long Term Database Transient Cache
+        register_rest_route( 'sinan/v1', '/geocode', array(
+            'methods'  => 'GET',
+            'callback' => array( $this, 'proxy_openmeteo_geocode' ),
+            'permission_callback' => '__return_true'
+        ));
     }
 
     /**
@@ -281,26 +288,34 @@ class TedderAPIProxy {
             $api_key = get_option( 'tedder_tomtom_api_key' );
             if ( empty( $api_key ) ) { $api_key = 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5'; }
             
-            // Query TomTom Reverse Geocoding API to resolve exact, live addressing tracks anywhere in Turkey
-            $roadName = '';
-            $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/{$lat},{$lon}.json?key={$api_key}";
-            $geocode_response = wp_remote_get( $geocode_url, array( 'timeout' => 5 ) );
+            // 30-Day Long-Term Transient Cache Split for Road Names to shield TomTom API limits completely
+            $lat_r = round((float) $lat, 3);
+            $lon_r = round((float) $lon, 3);
+            $road_cache_key = 'tedder_road_name_' . md5( $lat_r . '_' . $lon_r );
+            $roadName = get_transient( $road_cache_key );
             
-            if ( ! is_wp_error( $geocode_response ) ) {
-                $geocode_body = wp_remote_retrieve_body( $geocode_response );
-                $geocode_json = json_decode( $geocode_body, true );
-                if ( isset( $geocode_json['addresses'][0]['address']['streetName'] ) && ! empty( $geocode_json['addresses'][0]['address']['streetName'] ) ) {
-                    $roadName = $geocode_json['addresses'][0]['address']['streetName'];
-                } elseif ( isset( $geocode_json['addresses'][0]['address']['freeformAddress'] ) && ! empty( $geocode_json['addresses'][0]['address']['freeformAddress'] ) ) {
-                    // Fallback to freeform formatting splits if literal streetName is empty
-                    $addressParts = explode(',', $geocode_json['addresses'][0]['address']['freeformAddress']);
-                    $roadName = trim($addressParts[0]);
+            if ( false === $roadName ) {
+                $roadName = '';
+                // Enforce expanded radius and arterial/limited access rules to snap onto high-density corridors like the D-400
+                $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/${lat},${lon}.json?radius=1000&roadUse=LimitedAccess,Arterial&key=${api_key}";
+                $geocode_response = wp_remote_get( $geocode_url, array( 'timeout' => 5 ) );
+                
+                if ( ! is_wp_error( $geocode_response ) ) {
+                    $geocode_body = wp_remote_retrieve_body( $geocode_response );
+                    $geocode_json = json_decode( $geocode_body, true );
+                    if ( isset( $geocode_json['addresses'][0]['address']['streetName'] ) && ! empty( $geocode_json['addresses'][0]['address']['streetName'] ) ) {
+                        $roadName = $geocode_json['addresses'][0]['address']['streetName'];
+                    } elseif ( isset( $geocode_json['addresses'][0]['address']['freeformAddress'] ) && ! empty( $geocode_json['addresses'][0]['address']['freeformAddress'] ) ) {
+                        $addressParts = explode(',', $geocode_json['addresses'][0]['address']['freeformAddress']);
+                        $roadName = trim($addressParts[0]);
+                    }
                 }
-            }
-            
-            // If TomTom provides no addressing string text context, dynamically derive an adaptive descriptor using the location name
-            if ( empty( $roadName ) || $roadName === 'Bölgesel Yol Segmenti' ) {
-                $roadName = ucfirst($city) . ' Çevresi Ana Arter';
+                
+                if ( empty( $roadName ) || $roadName === 'Bölgesel Yol Segmenti' ) {
+                    $roadName = ucfirst($city) . ' Çevresi Ana Arter';
+                }
+                
+                set_transient( $road_cache_key, $roadName, 30 * DAY_IN_SECONDS );
             }
 
             $speed = isset( $flow_data['flowSegmentData']['currentSpeed'] ) ? round($flow_data['flowSegmentData']['currentSpeed']) : 50;
@@ -537,6 +552,32 @@ class TedderAPIProxy {
         }
 
         $response = new WP_REST_Response( json_decode( $cached_data, true ) );
+        $response->set_status( 200 );
+        return $response;
+    }
+
+    public function proxy_openmeteo_geocode( $request ) {
+        $query = sanitize_text_field( $request->get_param( 'q' ) );
+        if ( empty( $query ) || strlen( $query ) < 2 ) {
+            return new WP_Error( 'missing_query', 'Query string parameter required', array( 'status' => 400 ) );
+        }
+
+        // Deterministic Key Optimization via MD5 to protect database character integrity bounds
+        $cache_key = 'tg_search_' . md5( strtolower( trim( $query ) ) );
+        $cached = get_transient( $cache_key );
+
+        if ( false === $cached ) {
+            $url = "https://geocoding-api.open-meteo.com/v1/search?name=" . urlencode( $query ) . "&count=10&language=tr&format=json";
+            $response = wp_remote_get( $url, array( 'timeout' => 8 ) );
+            if ( is_wp_error( $response ) ) { return $response; }
+
+            $body = wp_remote_retrieve_body( $response );
+            set_transient( $cache_key, $body, 30 * DAY_IN_SECONDS );
+            $cached = $body;
+        }
+
+        // De-serialize array to prevent runtime double-JSON escape quote string encoding breaks
+        $response = new WP_REST_Response( json_decode( $cached, true ) );
         $response->set_status( 200 );
         return $response;
     }
