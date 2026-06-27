@@ -276,8 +276,12 @@ class TedderAPIProxy {
         );
 
         if ( ! isset( $city_points[$cityKey] ) ) {
-            $lat = isset($_GET['lat']) ? sanitize_text_field($_GET['lat']) : null;
-            $lon = isset($_GET['lon']) ? sanitize_text_field($_GET['lon']) : null;
+            // Fix: Protect passed parameters from being overwritten by un-hydrated global arrays
+            if ( empty( $lat ) || empty( $lon ) ) {
+                $lat = isset($_GET['lat']) ? sanitize_text_field($_GET['lat']) : null;
+                $lon = isset($_GET['lon']) ? sanitize_text_field($_GET['lon']) : null;
+            }
+            
             if ( ! $lat || ! $lon ) {
                 return new WP_Error( 'invalid_city', 'Coordinates missing for fallback evaluation.', array( 'status' => 400 ) );
             }
@@ -288,7 +292,7 @@ class TedderAPIProxy {
             $api_key = get_option( 'tedder_tomtom_api_key' );
             if ( empty( $api_key ) ) { $api_key = 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5'; }
             
-            // 30-Day Long-Term Transient Cache Split for Road Names to shield TomTom API limits completely
+            // 30-Day Long-Term Transient Cache Split for Road Names to protect TomTom API volume bounds
             $lat_r = round((float) $lat, 3);
             $lon_r = round((float) $lon, 3);
             $road_cache_key = 'tedder_road_name_' . md5( $lat_r . '_' . $lon_r );
@@ -296,8 +300,8 @@ class TedderAPIProxy {
             
             if ( false === $roadName ) {
                 $roadName = '';
-                // Enforce expanded radius and arterial/limited access rules to snap onto high-density corridors like the D-400
-                $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/${lat},${lon}.json?radius=1000&roadUse=LimitedAccess,Arterial&key=${api_key}";
+                // Refinement: Enforce a 2km radius expander and filter exclusively by major corridors to snap onto national routes automatically
+                $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/${lat},${lon}.json?radius=2000&roadUse=LimitedAccess,Arterial&key=${api_key}";
                 $geocode_response = wp_remote_get( $geocode_url, array( 'timeout' => 5 ) );
                 
                 if ( ! is_wp_error( $geocode_response ) ) {
@@ -337,7 +341,7 @@ class TedderAPIProxy {
                 'mainRoutes'         => array(
                     array('name' => $roadName . ' (Canlı Akış)', 'delay' => $percent > 25 ? 4 : 0, 'status' => $percent > 40 ? 'congested' : 'normal')
                 ),
-                'narrative'          => ucfirst($city) . ' ve çevresinde trafik akışı ' . $levelDescriptions[$level] . '.',
+                'narrative'          => ucfirst($city) . ' ve çevresinde rüzgar ve yol durumuna bağlı trafik akışı ' . $levelDescriptions[$level] . '.',
                 'lastUpdated'        => time() * 1000
             );
 
