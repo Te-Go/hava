@@ -276,14 +276,27 @@ class TedderAPIProxy {
         );
 
         if ( ! isset( $city_points[$cityKey] ) ) {
-            // Fix: Protect passed parameters from being overwritten by un-hydrated global arrays
             if ( empty( $lat ) || empty( $lon ) ) {
                 $lat = isset($_GET['lat']) ? sanitize_text_field($_GET['lat']) : null;
                 $lon = isset($_GET['lon']) ? sanitize_text_field($_GET['lon']) : null;
             }
             
             if ( ! $lat || ! $lon ) {
-                return new WP_Error( 'invalid_city', 'Coordinates missing for fallback evaluation.', array( 'status' => 400 ) );
+                return new WP_Error( 'invalid_city', 'Coordinates required for universal fallback evaluation.', array( 'status' => 400 ) );
+            }
+            
+            // Dynamic Coordinate Clustered Flow Key to prevent 'My Location' cache collisions
+            $lat_r = round((float) $lat, 3);
+            $lon_r = round((float) $lon, 3);
+            $coord_hash = md5( $lat_r . '_' . $lon_r );
+            
+            $flow_cache_key = 'tg_flow_grid_' . $coord_hash;
+            $road_cache_key = 'tg_road_geom_' . $coord_hash;
+            
+            // Early Return Guard: Read short-term flow metrics instantly if cached
+            $cached_flow = get_transient( $flow_cache_key );
+            if ( false !== $cached_flow ) {
+                return json_decode( $cached_flow, true );
             }
             
             $flow_data = $this->fetch_tomtom_flow_direct( $lat, $lon );
@@ -292,46 +305,38 @@ class TedderAPIProxy {
             $api_key = get_option( 'tedder_tomtom_api_key' );
             if ( empty( $api_key ) ) { $api_key = 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5'; }
             
-            // 30-Day Long-Term Transient Cache Split for Road Names to protect TomTom API volume bounds
-            $lat_r = round((float) $lat, 3);
-            $lon_r = round((float) $lon, 3);
-            $road_cache_key = 'tedder_road_name_' . md5( $lat_r . '_' . $lon_r );
+            // Read or write 30-day permanent road geometry metrics
             $roadName = get_transient( $road_cache_key );
-            
             if ( false === $roadName ) {
                 $roadName = '';
-                // Refinement: Enforce a 2km radius expander and filter exclusively by major corridors to snap onto national routes automatically
-                $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/${lat},${lon}.json?radius=2000&roadUse=LimitedAccess,Arterial&key=${api_key}";
+                // Drop the restrictive roadUse string entirely to safely map state/provincial corridors anywhere in Turkey
+                $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/${lat},${lon}.json?radius=2000&key=${api_key}";
                 $geocode_response = wp_remote_get( $geocode_url, array( 'timeout' => 5 ) );
                 
                 if ( ! is_wp_error( $geocode_response ) ) {
                     $geocode_body = wp_remote_retrieve_body( $geocode_response );
                     $geocode_json = json_decode( $geocode_body, true );
-                    $addr = isset( $geocode_json['addresses'][0]['address'] ) ? $geocode_json['addresses'][0]['address'] : null;
-                    if ( $addr ) {
-                        if ( isset( $addr['streetName'] ) && ! empty( $addr['streetName'] ) ) {
-                            $roadName = $addr['streetName'];
-                        } elseif ( isset( $addr['street'] ) && ! empty( $addr['street'] ) ) {
-                            $roadName = $addr['street'];
-                        } elseif ( isset( $addr['localName'] ) && ! empty( $addr['localName'] ) ) {
-                            $roadName = $addr['localName'];
-                        } elseif ( isset( $addr['freeformAddress'] ) && ! empty( $addr['freeformAddress'] ) ) {
-                            $addressParts = explode(',', $addr['freeformAddress']);
-                            $roadName = trim($addressParts[0]);
-                        }
+                    if ( isset( $geocode_json['addresses'][0]['address']['streetName'] ) && ! empty( $geocode_json['addresses'][0]['address']['streetName'] ) ) {
+                        $roadName = $geocode_json['addresses'][0]['address']['streetName'];
+                    } elseif ( isset( $geocode_json['addresses'][0]['address']['freeformAddress'] ) && ! empty( $geocode_json['addresses'][0]['address']['freeformAddress'] ) ) {
+                        $addressParts = explode(',', $geocode_json['addresses'][0]['address']['freeformAddress']);
+                        $roadName = trim($addressParts[0]);
                     }
                 }
                 
-                if ( empty( $roadName ) || $roadName === 'Bölgesel Yol Segmenti' ) {
-                    $roadName = 'Yakın Yol Bilgisi Alınamıyor';
+                // Algorithmic Fallback: Programmatically build local road descriptors safely if metadata is empty or noise
+                $cleanCityName = ucfirst(sanitize_text_field(trim($city)));
+                if ( empty( $roadName ) || $roadName === 'Bölgesel Yol Segmenti' || preg_match('/^\d+$/', $roadName) ) {
+                    $roadName = $cleanCityName . ' Giriş Arteri';
                 }
                 
                 set_transient( $road_cache_key, $roadName, 30 * DAY_IN_SECONDS );
             }
-
+            
             $speed = isset( $flow_data['flowSegmentData']['currentSpeed'] ) ? round($flow_data['flowSegmentData']['currentSpeed']) : 50;
             $freeFlow = isset( $flow_data['flowSegmentData']['freeFlowSpeed'] ) ? round($flow_data['flowSegmentData']['freeFlowSpeed']) : 50;
             $percent = $freeFlow > 0 ? max( 0, min( 100, round( ( 1 - ( $speed / $freeFlow ) ) * 100 ) ) ) : 0;
+            
             $level = $percent > 50 ? 'severe' : ($percent > 35 ? 'high' : ($percent > 15 ? 'medium' : 'low'));
             $levelDescriptions = array('low' => 'akıcı', 'medium' => 'yoğun', 'high' => 'çok yoğun', 'severe' => 'kilitli');
             
@@ -348,11 +353,11 @@ class TedderAPIProxy {
                 'mainRoutes'         => array(
                     array('name' => $roadName . ' (Canlı Akış)', 'delay' => $percent > 25 ? 4 : 0, 'status' => $percent > 40 ? 'congested' : 'normal')
                 ),
-                'narrative'          => ucfirst($city) . ' ve çevresinde rüzgar ve yol durumuna bağlı trafik akışı ' . $levelDescriptions[$level] . '.',
+                'narrative'          => $cleanCityName . ' ve çevresinde anlık yol durumuna bağlı trafik akışı ' . $levelDescriptions[$level] . '.',
                 'lastUpdated'        => time() * 1000
             );
-
-            set_transient( $cache_key, json_encode( $compiled_data ), 300 );
+            
+            set_transient( $flow_cache_key, json_encode( $compiled_data ), 300 ); // 5-Minute Short-Term Flow Transient
             return $compiled_data;
         }
 
