@@ -285,20 +285,21 @@ class TedderAPIProxy {
                 return new WP_Error( 'invalid_city', 'Coordinates required for universal fallback evaluation.', array( 'status' => 400 ) );
             }
             
-            // Dynamic Coordinate Clustered Flow Key to prevent 'My Location' cache collisions
+            // Enforce unique coordinate-clustered grid hashing to eliminate multi-user cache collisions
             $lat_r = round((float) $lat, 3);
             $lon_r = round((float) $lon, 3);
             $coord_hash = md5( $lat_r . '_' . $lon_r );
             
-            $flow_cache_key = 'tg_flow_grid_' . $coord_hash;
-            $road_cache_key = 'tg_road_geom_' . $coord_hash;
+            $flow_cache_key = 'tg_flow_grid_v7_' . $coord_hash;
+            $road_cache_key = 'tg_road_geom_v7_' . $coord_hash;
             
-            // Early Return Guard: Read short-term flow metrics instantly if cached
+            // Early Return Guard: Serve short-term flow metrics instantly if cached
             $cached_flow = get_transient( $flow_cache_key );
             if ( false !== $cached_flow ) {
                 return json_decode( $cached_flow, true );
             }
             
+            // Query live telemetry flow metrics for the closest functional road class segment
             $flow_data = $this->fetch_tomtom_flow_direct( $lat, $lon );
             if ( is_wp_error( $flow_data ) ) { return $flow_data; }
             
@@ -307,30 +308,63 @@ class TedderAPIProxy {
             
             // Read or write 30-day permanent road geometry metrics
             $roadName = get_transient( $road_cache_key );
+            $resolvedLocationName = '';
+            
             if ( false === $roadName ) {
                 $roadName = '';
-                // Drop the restrictive roadUse string entirely to safely map state/provincial corridors anywhere in Turkey
-                $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/${lat},${lon}.json?radius=2000&key=${api_key}";
+                
+                // Enterprise Standard: Extract coordinates directly from the matched TomTom Flow segment line array
+                $geocode_lat = $lat;
+                $geocode_lon = $lon;
+                if ( isset( $flow_data['flowSegmentData']['coordinates']['coordinate'][0]['latitude'] ) ) {
+                    $geocode_lat = $flow_data['flowSegmentData']['coordinates']['coordinate'][0]['latitude'];
+                    $geocode_lon = $flow_data['flowSegmentData']['coordinates']['coordinate'][0]['longitude'];
+                }
+                
+                // Reverse geocode the exact highway line instead of the town centroid
+                $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/${geocode_lat},${geocode_lon}.json?radius=1000&key=${api_key}";
                 $geocode_response = wp_remote_get( $geocode_url, array( 'timeout' => 5 ) );
                 
                 if ( ! is_wp_error( $geocode_response ) ) {
                     $geocode_body = wp_remote_retrieve_body( $geocode_response );
                     $geocode_json = json_decode( $geocode_body, true );
-                    if ( isset( $geocode_json['addresses'][0]['address']['streetName'] ) && ! empty( $geocode_json['addresses'][0]['address']['streetName'] ) ) {
-                        $roadName = $geocode_json['addresses'][0]['address']['streetName'];
-                    } elseif ( isset( $geocode_json['addresses'][0]['address']['freeformAddress'] ) && ! empty( $geocode_json['addresses'][0]['address']['freeformAddress'] ) ) {
-                        $addressParts = explode(',', $geocode_json['addresses'][0]['address']['freeformAddress']);
-                        $roadName = trim($addressParts[0]);
+                    $addr_meta = isset( $geocode_json['addresses'][0]['address'] ) ? $geocode_json['addresses'][0]['address'] : null;
+                    
+                    if ( $addr_meta ) {
+                        if ( isset( $addr_meta['streetName'] ) && ! empty( $addr_meta['streetName'] ) ) {
+                            $roadName = $addr_meta['streetName'];
+                        } elseif ( isset( $addr_meta['freeformAddress'] ) && ! empty( $addr_meta['freeformAddress'] ) ) {
+                            $addressParts = explode(',', $addr_meta['freeformAddress']);
+                            $roadName = trim($addressParts[0]);
+                        }
+                        
+                        // Connect Coords to Location: Map spatial neighborhood and municipality markers back to the view contract
+                        if ( isset( $addr_meta['neighbourhood'] ) && ! empty( $addr_meta['neighbourhood'] ) ) {
+                            $resolvedLocationName = $addr_meta['neighbourhood'];
+                        } elseif ( isset( $addr_meta['municipality'] ) && ! empty( $addr_meta['municipality'] ) ) {
+                            $resolvedLocationName = $addr_meta['municipality'];
+                        }
                     }
                 }
                 
-                // Algorithmic Fallback: Programmatically build local road descriptors safely if metadata is empty or noise
+                // Algorithmic Fallback Builder: Clean up if API metadata is generic, numeric noise, or missing
                 $cleanCityName = ucfirst(sanitize_text_field(trim($city)));
                 if ( empty( $roadName ) || $roadName === 'Bölgesel Yol Segmenti' || preg_match('/^\d+$/', $roadName) ) {
-                    $roadName = $cleanCityName . ' Giriş Arteri';
+                    $roadName = (strpos($cleanCityName, 'Konum') !== false && !empty($resolvedLocationName)) ? $resolvedLocationName : $cleanCityName;
+                    $roadName = $roadName . ' Giriş Arteri';
                 }
                 
-                set_transient( $road_cache_key, $roadName, 30 * DAY_IN_SECONDS );
+                set_transient( $road_cache_key, json_encode( array( 'road' => $roadName, 'loc' => $resolvedLocationName ) ), 30 * DAY_IN_SECONDS );
+            } else {
+                $decompressed = json_decode( $roadName, true );
+                $roadName = $decompressed['road'];
+                $resolvedLocationName = $decompressed['loc'];
+            }
+            
+            // Overwrite display city variable if geolocating a raw coordinate query string
+            $displayCityTitle = $city;
+            if ( ( strpos($city, 'konum') !== false || preg_match('/[0-9]/', $city) ) && ! empty( $resolvedLocationName ) ) {
+                $displayCityTitle = $resolvedLocationName;
             }
             
             $speed = isset( $flow_data['flowSegmentData']['currentSpeed'] ) ? round($flow_data['flowSegmentData']['currentSpeed']) : 50;
@@ -341,7 +375,7 @@ class TedderAPIProxy {
             $levelDescriptions = array('low' => 'akıcı', 'medium' => 'yoğun', 'high' => 'çok yoğun', 'severe' => 'kilitli');
             
             $compiled_data = array(
-                'city'               => $city,
+                'city'               => ucfirst(sanitize_text_field(trim($displayCityTitle))),
                 'currentSpeed'       => $speed,
                 'freeFlowSpeed'      => $freeFlow,
                 'currentTravelTime'  => 0,
@@ -353,11 +387,11 @@ class TedderAPIProxy {
                 'mainRoutes'         => array(
                     array('name' => $roadName . ' (Canlı Akış)', 'delay' => $percent > 25 ? 4 : 0, 'status' => $percent > 40 ? 'congested' : 'normal')
                 ),
-                'narrative'          => $cleanCityName . ' ve çevresinde anlık yol durumuna bağlı trafik akışı ' . $levelDescriptions[$level] . '.',
+                'narrative'          => ucfirst(trim($displayCityTitle)) . ' ve çevresinde anlık yol durumuna bağlı trafik akışı ' . $levelDescriptions[$level] . '.',
                 'lastUpdated'        => time() * 1000
             );
             
-            set_transient( $flow_cache_key, json_encode( $compiled_data ), 300 ); // 5-Minute Short-Term Flow Transient
+            set_transient( $flow_cache_key, json_encode( $compiled_data ), 300 );
             return $compiled_data;
         }
 
