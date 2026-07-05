@@ -307,16 +307,23 @@ class TedderAPIProxy {
                 if ( ! is_wp_error( $geocode_response ) ) {
                     $geocode_body = wp_remote_retrieve_body( $geocode_response );
                     $geocode_json = json_decode( $geocode_body, true );
-                    if ( isset( $geocode_json['addresses'][0]['address']['streetName'] ) && ! empty( $geocode_json['addresses'][0]['address']['streetName'] ) ) {
-                        $roadName = $geocode_json['addresses'][0]['address']['streetName'];
-                    } elseif ( isset( $geocode_json['addresses'][0]['address']['freeformAddress'] ) && ! empty( $geocode_json['addresses'][0]['address']['freeformAddress'] ) ) {
-                        $addressParts = explode(',', $geocode_json['addresses'][0]['address']['freeformAddress']);
-                        $roadName = trim($addressParts[0]);
+                    $addr = isset( $geocode_json['addresses'][0]['address'] ) ? $geocode_json['addresses'][0]['address'] : null;
+                    if ( $addr ) {
+                        if ( isset( $addr['streetName'] ) && ! empty( $addr['streetName'] ) ) {
+                            $roadName = $addr['streetName'];
+                        } elseif ( isset( $addr['street'] ) && ! empty( $addr['street'] ) ) {
+                            $roadName = $addr['street'];
+                        } elseif ( isset( $addr['localName'] ) && ! empty( $addr['localName'] ) ) {
+                            $roadName = $addr['localName'];
+                        } elseif ( isset( $addr['freeformAddress'] ) && ! empty( $addr['freeformAddress'] ) ) {
+                            $addressParts = explode(',', $addr['freeformAddress']);
+                            $roadName = trim($addressParts[0]);
+                        }
                     }
                 }
                 
                 if ( empty( $roadName ) || $roadName === 'Bölgesel Yol Segmenti' ) {
-                    $roadName = ucfirst($city) . ' Çevresi Ana Arter';
+                    $roadName = 'Yakın Yol Bilgisi Alınamıyor';
                 }
                 
                 set_transient( $road_cache_key, $roadName, 30 * DAY_IN_SECONDS );

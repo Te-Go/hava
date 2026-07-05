@@ -181,21 +181,11 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
 
     useEffect(() => {
         if (mapRef.current && mapReady) {
-            const path = window.location.pathname;
-            const segments = path.split('/').filter(Boolean);
-            const isCityPage = segments.length >= 2 && segments[0] === 'hava-durumu';
-            const isDistrictPage = isCityPage && segments.length === 3 && !['yarin', '15-gunluk', 'hafta-sonu'].includes(segments[2]);
-
-            if (isCityPage && weatherData?.coord) {
-                const { lat, lon } = weatherData.coord;
-                if (typeof lat === 'number' && typeof lon === 'number') {
-                    mapRef.current.setView([lat, lon], isDistrictPage ? 11 : 8, { animate: true });
-                }
-            } else {
-                mapRef.current.setView([38.9637, 35.2433], 6, { animate: true });
-            }
+            const lat = weatherData?.coord?.lat || 36.8841;
+            const lon = weatherData?.coord?.lon || 30.7056;
+            mapRef.current.setView([lat, lon], 9);
         }
-    }, [weatherData?.coord, mapReady]);
+    }, [weatherData, mapReady]);
 
     useEffect(() => {
         const updateLayers = async () => {

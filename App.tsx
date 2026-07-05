@@ -38,6 +38,7 @@ const SeaTempPage = React.lazy(() => import('./components/SeaTempPage'));
 import LastUpdated from './components/LastUpdated';
 import SEOFAQSection from './components/SEOFAQSection';
 import LocalDistrictsGrid from './components/LocalDistrictsGrid';
+import { getParentCity, REGULAR_CITIES, SEASONAL_SPOTS } from './shared/cityData';
 import { Icon } from './components/Icons';
 
 // Islands & Services
@@ -807,7 +808,26 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
     const citySlug = toSlug(cleanDisplayCity);
 
     setCurrentCity(citySlug);
-    setParentCity(null);
+    
+    // ACTION 3: Lock parent province context for district navigation
+    const resolvedParent = getParentCity(cleanDisplayCity);
+    const isDistrict = !REGULAR_CITIES.includes(cleanDisplayCity as any) && 
+                       !SEASONAL_SPOTS.some(s => s.name === cleanDisplayCity);
+    
+    if (resolvedParent) {
+      setParentCity(resolvedParent);
+    } else if (isDistrict) {
+      if (parentCity) {
+        // Keep the previous parentCity during district-to-district transitions
+      } else {
+        const prevCityDisplay = fromSlug(currentCity);
+        if (REGULAR_CITIES.includes(prevCityDisplay as any)) {
+          setParentCity(prevCityDisplay);
+        }
+      }
+    } else {
+      setParentCity(null);
+    }
 
     // Sync with Local Preferences under KVKK Compliance bounds
     const prefs = getUserPreferences();
