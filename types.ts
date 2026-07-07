@@ -22,6 +22,9 @@ export interface WeatherData {
   cloudCover: number; // Cloud cover percentage (0-100)
   hourly: HourlyForecast[];
   daily: DailyForecast[];
+  sunriseUtcMs?: number;
+  sunsetUtcMs?: number;
+  currentUtcMs?: number;
 }
 
 export interface HourlyForecast {
@@ -54,6 +57,10 @@ export interface DailyForecast {
   visibility: number; // Visibility in km
   precipitationSum?: number; // Total precipitation (mm)
   fullDate?: string; // ISO Date (YYYY-MM-DD) for matching
+  sunriseUtcMs?: number;
+  sunsetUtcMs?: number;
+  sunrise?: string;
+  sunset?: string;
 }
 
 export interface NewsItem {

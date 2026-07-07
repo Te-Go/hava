@@ -507,7 +507,7 @@ export const calculateLifestyleIndexes = (data: WeatherData): LifestyleIndex[] =
 // Keyless, high-performance API for Air Quality Index
 // Docs: https://open-meteo.com/en/docs/air-quality-api
 
-const fetchAirQuality = async (lat: number, lon: number): Promise<number> => {
+const fetchAirQuality = async (lat: number, lon: number, payloadTimeStr?: string): Promise<number> => {
   // Use Cache Wrapper: 60 Minutes TTL
   const cacheKey = `aqi_v1_${lat.toFixed(4)}_${lon.toFixed(4)}`;
 
@@ -533,16 +533,16 @@ const fetchAirQuality = async (lat: number, lon: number): Promise<number> => {
 
         // Get the current hour's US AQI or first available hourly index
         if (data.hourly && Array.isArray(data.hourly.us_aqi) && data.hourly.us_aqi.length > 0) {
-          const currentHourStr = new Date().toISOString().substring(0, 13) + ':00';
-          let matchIndex = data.hourly.time.findIndex((t: string) => t.startsWith(currentHourStr.substring(0, 13)));
+          const matchTimeStr = payloadTimeStr || new Date().toISOString().substring(0, 13) + ':00';
+          let matchIndex = data.hourly.time.findIndex((t: string) => t.startsWith(matchTimeStr.substring(0, 13)));
           if (matchIndex === -1) {
-            const nowMs = Date.now();
+            const currentMs = new Date(matchTimeStr + 'Z').getTime();
             let minDiff = Infinity;
             matchIndex = 0;
             for (let i = 0; i < data.hourly.time.length; i++) {
-              const tMs = new Date(data.hourly.time[i]).getTime();
+              const tMs = new Date(data.hourly.time[i] + 'Z').getTime();
               if (!isNaN(tMs)) {
-                const diff = Math.abs(tMs - nowMs);
+                const diff = Math.abs(tMs - currentMs);
                 if (diff < minDiff) {
                   minDiff = diff;
                   matchIndex = i;
@@ -634,13 +634,13 @@ export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<W
 
   let nowIndex = hourly.time.findIndex((t: string) => t >= current.time);
   if (nowIndex === -1) {
-    const nowMs = Date.now();
+    const currentMs = current.time ? new Date(current.time + 'Z').getTime() : Date.now();
     let minDiff = Infinity;
     nowIndex = 0;
     for (let i = 0; i < hourly.time.length; i++) {
-      const tMs = new Date(hourly.time[i]).getTime();
+      const tMs = new Date(hourly.time[i] + 'Z').getTime();
       if (!isNaN(tMs)) {
-        const diff = Math.abs(tMs - nowMs);
+        const diff = Math.abs(tMs - currentMs);
         if (diff < minDiff) {
           minDiff = diff;
           nowIndex = i;
@@ -692,6 +692,12 @@ export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<W
     if (i === 0) displayDay = 'Bugün';
     if (i === 1) displayDay = 'Yarın';
 
+    const offsetSeconds = typeof rawData?.utc_offset_seconds === 'number' ? rawData.utc_offset_seconds : 10800;
+    const sunriseStr = daily.sunrise?.[i];
+    const sunsetStr = daily.sunset?.[i];
+    const sunriseUtcMs = sunriseStr ? new Date(sunriseStr + 'Z').getTime() - (offsetSeconds * 1000) : undefined;
+    const sunsetUtcMs = sunsetStr ? new Date(sunsetStr + 'Z').getTime() - (offsetSeconds * 1000) : undefined;
+
     dailyData.push({
       day: displayDay,
       date: dateStr,
@@ -707,7 +713,11 @@ export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<W
       uvIndex: daily.uv_index_max ? Math.round(daily.uv_index_max?.[i] ?? 0) : 0, // New Mapping
       // Estimate daily visibility from hourly at noon (approx index i*24 + 12)
       visibility: (hourly.visibility && hourly.visibility[i * 24 + 12]) ? Math.round(hourly.visibility[i * 24 + 12] / 1000) : 10,
-      precipitationSum: daily.precipitation_sum ? (daily.precipitation_sum[i] ?? 0) : 0 // New Mapping
+      precipitationSum: daily.precipitation_sum ? (daily.precipitation_sum[i] ?? 0) : 0, // New Mapping
+      sunrise: sunriseStr ? sunriseStr.split('T')[1] : undefined,
+      sunset: sunsetStr ? sunsetStr.split('T')[1] : undefined,
+      sunriseUtcMs,
+      sunsetUtcMs
     });
   }
 
@@ -729,9 +739,12 @@ export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<W
     uvIndex: hourly.uv_index?.[validIndex] ?? 0,
     feelsLike: current.apparent_temperature ?? 0,
     pressure: current.surface_pressure ?? 0,
-    aqi: await fetchAirQuality(data.latitude ?? 0, data.longitude ?? 0),
+    aqi: await fetchAirQuality(data.latitude ?? 0, data.longitude ?? 0, current.time),
     sunrise: daily.sunrise?.[0]?.split('T')[1] || '06:00',
     sunset: daily.sunset?.[0]?.split('T')[1] || '18:00',
+    sunriseUtcMs: daily.sunrise?.[0] ? new Date(daily.sunrise[0] + 'Z').getTime() - (offsetSeconds * 1000) : undefined,
+    sunsetUtcMs: daily.sunset?.[0] ? new Date(daily.sunset[0] + 'Z').getTime() - (offsetSeconds * 1000) : undefined,
+    currentUtcMs: current.time ? new Date(current.time + 'Z').getTime() - (offsetSeconds * 1000) : undefined,
     cloudCover: current.cloud_cover ?? 0,
     hourly: hourlyData,
     daily: dailyData
@@ -1072,6 +1085,11 @@ export const transformToTomorrow = (data: WeatherData): WeatherData => {
     uvIndex: tomorrowDaily.uvIndex || data.uvIndex,
     feelsLike: tomorrowDaily.feelsLike || data.feelsLike,
     hourly: tomorrowHourly,
+    sunrise: tomorrowDaily.sunrise || data.sunrise,
+    sunset: tomorrowDaily.sunset || data.sunset,
+    sunriseUtcMs: tomorrowDaily.sunriseUtcMs || (data.sunriseUtcMs ? data.sunriseUtcMs + 24 * 3600 * 1000 : undefined),
+    sunsetUtcMs: tomorrowDaily.sunsetUtcMs || (data.sunsetUtcMs ? data.sunsetUtcMs + 24 * 3600 * 1000 : undefined),
+    currentUtcMs: data.currentUtcMs ? data.currentUtcMs + 24 * 3600 * 1000 : undefined,
   };
 };
 

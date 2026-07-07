@@ -28,12 +28,22 @@ const HeroDashboard: React.FC<HeroDashboardProps> = ({ data, badgeText = "Şimdi
   const tomorrowHref = `${baseUrl}/yarin`;
   const fifteenDaysHref = `${baseUrl}/15-gunluk`;
 
-  // Dynamic timezone-aligned astronomical condition tracking
-  const currentHourStr = data.hourly?.[0]?.time || '12:00';
-  const currentHour = parseInt(currentHourStr.split(':')[0], 10);
-  const sunriseHour = parseInt(data.sunrise?.split(':')[0] || '6', 10);
-  const sunsetHour = parseInt(data.sunset?.split(':')[0] || '20', 10);
-  const isNight = currentHour < sunriseHour || currentHour >= sunsetHour;
+  // Enforce payload-driven astronomical corrections based directly on payload solar boundaries
+  const currentUtcMs = data.currentUtcMs || Date.now();
+  const sunriseUtcMs = data.sunriseUtcMs;
+  const sunsetUtcMs = data.sunsetUtcMs;
+
+  let isNight = false;
+  if (typeof sunriseUtcMs === 'number' && typeof sunsetUtcMs === 'number') {
+    isNight = currentUtcMs >= sunsetUtcMs || currentUtcMs < sunriseUtcMs;
+  } else {
+    // Fallback: estimate from sunrise/sunset hours if timestamps are missing
+    const currentHourStr = data.hourly?.[0]?.time || '12:00';
+    const currentHour = parseInt(currentHourStr.split(':')[0], 10);
+    const sunriseHour = parseInt(data.sunrise?.split(':')[0] || '6', 10);
+    const sunsetHour = parseInt(data.sunset?.split(':')[0] || '20', 10);
+    isNight = currentHour < sunriseHour || currentHour >= sunsetHour;
+  }
 
   let displayIcon = data.icon;
   if (isNight) {
