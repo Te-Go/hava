@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { WeatherData } from '../types';
 import GlassCard from './GlassCard';
 import { WeatherIcon3D } from './Icons';
@@ -28,14 +28,29 @@ const HeroDashboard: React.FC<HeroDashboardProps> = ({ data, badgeText = "Şimdi
   const tomorrowHref = `${baseUrl}/yarin`;
   const fifteenDaysHref = `${baseUrl}/15-gunluk`;
 
-  // Enforce payload-driven astronomical corrections based directly on payload solar boundaries
-  const currentUtcMs = data.currentUtcMs || Date.now();
+  // Enforce payload-driven astronomical corrections with zero-trust real-time chrono-ticker
+  const [activeTimeMs, setActiveTimeMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (data?.currentUtcMs) {
+      setActiveTimeMs(data.currentUtcMs);
+      
+      // Establish a clean, isolated heartbeat ticker
+      const tickerId = setInterval(() => {
+        setActiveTimeMs(prev => (prev !== null ? prev + 60000 : null));
+      }, 60000);
+      
+      // Enforce zero-trust lifecycle cleanup to completely prevent memory leaks
+      return () => clearInterval(tickerId);
+    }
+  }, [data?.currentUtcMs]);
+
   const sunriseUtcMs = data.sunriseUtcMs;
   const sunsetUtcMs = data.sunsetUtcMs;
 
   let isNight = false;
-  if (typeof sunriseUtcMs === 'number' && typeof sunsetUtcMs === 'number') {
-    isNight = currentUtcMs >= sunsetUtcMs || currentUtcMs < sunriseUtcMs;
+  if (activeTimeMs !== null && typeof sunriseUtcMs === 'number' && typeof sunsetUtcMs === 'number') {
+    isNight = activeTimeMs >= sunsetUtcMs || activeTimeMs < sunriseUtcMs;
   } else {
     // Fallback: estimate from sunrise/sunset hours if timestamps are missing
     const currentHourStr = data.hourly?.[0]?.time || '12:00';

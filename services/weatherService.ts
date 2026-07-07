@@ -1087,8 +1087,8 @@ export const transformToTomorrow = (data: WeatherData): WeatherData => {
     hourly: tomorrowHourly,
     sunrise: tomorrowDaily.sunrise || data.sunrise,
     sunset: tomorrowDaily.sunset || data.sunset,
-    sunriseUtcMs: tomorrowDaily.sunriseUtcMs || (data.sunriseUtcMs ? data.sunriseUtcMs + 24 * 3600 * 1000 : undefined),
-    sunsetUtcMs: tomorrowDaily.sunsetUtcMs || (data.sunsetUtcMs ? data.sunsetUtcMs + 24 * 3600 * 1000 : undefined),
+    sunriseUtcMs: tomorrowDaily.sunriseUtcMs,
+    sunsetUtcMs: tomorrowDaily.sunsetUtcMs,
     currentUtcMs: data.currentUtcMs ? data.currentUtcMs + 24 * 3600 * 1000 : undefined,
   };
 };
