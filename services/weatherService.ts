@@ -534,8 +534,23 @@ const fetchAirQuality = async (lat: number, lon: number): Promise<number> => {
         // Get the current hour's US AQI or first available hourly index
         if (data.hourly && Array.isArray(data.hourly.us_aqi) && data.hourly.us_aqi.length > 0) {
           const currentHourStr = new Date().toISOString().substring(0, 13) + ':00';
-          const matchIndex = data.hourly.time.findIndex((t: string) => t.startsWith(currentHourStr.substring(0, 13)));
-          const index = matchIndex !== -1 ? matchIndex : 0;
+          let matchIndex = data.hourly.time.findIndex((t: string) => t.startsWith(currentHourStr.substring(0, 13)));
+          if (matchIndex === -1) {
+            const nowMs = Date.now();
+            let minDiff = Infinity;
+            matchIndex = 0;
+            for (let i = 0; i < data.hourly.time.length; i++) {
+              const tMs = new Date(data.hourly.time[i]).getTime();
+              if (!isNaN(tMs)) {
+                const diff = Math.abs(tMs - nowMs);
+                if (diff < minDiff) {
+                  minDiff = diff;
+                  matchIndex = i;
+                }
+              }
+            }
+          }
+          const index = matchIndex;
           const aqi = data.hourly.us_aqi[index];
           return typeof aqi === 'number' ? Math.round(aqi) : 40;
         }
@@ -617,8 +632,23 @@ export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<W
   const daily = data.daily;
   const isDay = current.is_day === 1;
 
-  const nowIndex = hourly.time.findIndex((t: string) => t >= current.time);
-  const validIndex = nowIndex === -1 ? 0 : nowIndex;
+  let nowIndex = hourly.time.findIndex((t: string) => t >= current.time);
+  if (nowIndex === -1) {
+    const nowMs = Date.now();
+    let minDiff = Infinity;
+    nowIndex = 0;
+    for (let i = 0; i < hourly.time.length; i++) {
+      const tMs = new Date(hourly.time[i]).getTime();
+      if (!isNaN(tMs)) {
+        const diff = Math.abs(tMs - nowMs);
+        if (diff < minDiff) {
+          minDiff = diff;
+          nowIndex = i;
+        }
+      }
+    }
+  }
+  const validIndex = nowIndex;
 
   // Get Current Probability
   const currentRainProb = hourly.precipitation_probability[validIndex] || 0;

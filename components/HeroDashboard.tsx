@@ -28,6 +28,22 @@ const HeroDashboard: React.FC<HeroDashboardProps> = ({ data, badgeText = "Şimdi
   const tomorrowHref = `${baseUrl}/yarin`;
   const fifteenDaysHref = `${baseUrl}/15-gunluk`;
 
+  // Dynamic timezone-aligned astronomical condition tracking
+  const currentHourStr = data.hourly?.[0]?.time || '12:00';
+  const currentHour = parseInt(currentHourStr.split(':')[0], 10);
+  const sunriseHour = parseInt(data.sunrise?.split(':')[0] || '6', 10);
+  const sunsetHour = parseInt(data.sunset?.split(':')[0] || '20', 10);
+  const isNight = currentHour < sunriseHour || currentHour >= sunsetHour;
+
+  let displayIcon = data.icon;
+  if (isNight) {
+    if (displayIcon === 'sunny') displayIcon = 'moon';
+    if (displayIcon === 'cloudy') displayIcon = 'cloudy-night';
+  } else {
+    if (displayIcon === 'moon') displayIcon = 'sunny';
+    if (displayIcon === 'cloudy-night') displayIcon = 'cloudy';
+  }
+
   return (
     <div className="flex flex-col gap-4 mb-6">
 
@@ -114,7 +130,7 @@ const HeroDashboard: React.FC<HeroDashboardProps> = ({ data, badgeText = "Şimdi
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">{data.condition}</p>
               </div>
-              <WeatherIcon3D type={data.icon} className="transform scale-150 mr-4" />
+              <WeatherIcon3D type={displayIcon} className="transform scale-150 mr-4" />
             </div>
           </div>
 
@@ -122,7 +138,7 @@ const HeroDashboard: React.FC<HeroDashboardProps> = ({ data, badgeText = "Şimdi
             <div className="bg-blue-50/50 dark:bg-slate-800/50 rounded-xl p-3 border border-blue-100/50 dark:border-slate-700 relative overflow-hidden">
               {/* Background Icon */}
               <div className="absolute -right-2 -bottom-4 opacity-10 dark:opacity-5 pointer-events-none">
-                <WeatherIcon3D type={data.icon} className="w-24 h-24 transform rotate-12" />
+                <WeatherIcon3D type={displayIcon} className="w-24 h-24 transform rotate-12" />
               </div>
 
               <div className="relative z-10">

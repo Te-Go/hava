@@ -130,380 +130,117 @@ class TedderAPIProxy {
         return json_decode( $cached_data, true );
     }
 
-    private function handle_tomtom_city_request( $city, $lat = null, $lon = null ) {
-        $cityKey = strtolower( $city );
+    private function handle_tomtom_city_request( $city, $passed_lat = null, $passed_lon = null ) {
+        // Force explicit local scoping to prevent multi-request variable cross-contamination
+        $lat = !empty($passed_lat) ? sanitize_text_field($passed_lat) : (isset($_GET['lat']) ? sanitize_text_field($_GET['lat']) : null);
+        $lon = !empty($passed_lon) ? sanitize_text_field($passed_lon) : (isset($_GET['lon']) ? sanitize_text_field($_GET['lon']) : null);
+        $roadName = '';
+        $resolvedLocationName = '';
+        $cityKey = strtolower( sanitize_text_field( trim( $city ) ) );
+        
         $cityKey = str_replace(
             array('ı', 'ş', 'ğ', 'ü', 'ö', 'ç', 'İ', 'Ş', 'Ğ', 'Ü', 'Ö', 'Ç'),
             array('i', 's', 'g', 'u', 'o', 'c', 'i', 's', 'g', 'u', 'o', 'c'),
             $cityKey
         );
 
-        $cache_key = 'tedder_city_traffic_' . $cityKey;
-        $cached = get_transient( $cache_key );
-        if ( $cached !== false ) { return json_decode( $cached, true ); }
-
-        $city_points = array(
-            'istanbul' => array(
-                array('name' => 'E-5 (Bakırköy) - Topkapı Yönü', 'lat' => 40.9867, 'lon' => 28.8508),
-                array('name' => 'FSM Köprüsü - Avrupa Yakası Yönü', 'lat' => 41.0917, 'lon' => 29.0678),
-                array('name' => 'D-100 (Kartal) - Kadıköy Yönü', 'lat' => 40.8922, 'lon' => 29.1967),
-                array('name' => '15 Temmuz Köprüsü - Avrupa Yakası Yönü', 'lat' => 41.0458, 'lon' => 29.0342),
-                array('name' => 'TEM (Seyrantepe) - Ankara Yönü', 'lat' => 41.1064, 'lon' => 28.9925),
-                array('name' => 'Haliç Köprüsü - Mecidiyeköy Yönü', 'lat' => 41.0342, 'lon' => 28.9692),
-            ),
-            'ankara' => array(
-                array('name' => 'Eskişehir Yolu', 'lat' => 39.9167, 'lon' => 32.7833),
-                array('name' => 'Konya Yolu', 'lat' => 39.8833, 'lon' => 32.8667),
-                array('name' => 'İstanbul Yolu', 'lat' => 39.9667, 'lon' => 32.6833),
-                array('name' => 'Çankaya-Kızılay', 'lat' => 39.9272, 'lon' => 32.8644),
-            ),
-            'izmir' => array(
-                array('name' => 'Altınyol', 'lat' => 38.4192, 'lon' => 27.1287),
-                array('name' => 'Konak-Bornova', 'lat' => 38.4219, 'lon' => 27.1389),
-                array('name' => 'Çeşme Otoyolu', 'lat' => 38.4331, 'lon' => 27.0892),
-            ),
-            'bursa' => array(
-                array('name' => 'İstanbul Yolu', 'lat' => 40.2056, 'lon' => 28.9500),
-                array('name' => 'Mudanya Yolu', 'lat' => 40.2667, 'lon' => 28.8667),
-                array('name' => 'Yalova Yolu', 'lat' => 40.2333, 'lon' => 29.0167),
-            ),
-            'antalya' => array(
-                array('name' => 'D-400 (Lara)', 'lat' => 36.8533, 'lon' => 30.7267),
-                array('name' => 'Akdeniz Bulvarı', 'lat' => 36.8867, 'lon' => 30.6983),
-                array('name' => 'Aspendos Bulvarı', 'lat' => 36.8950, 'lon' => 30.7117),
-            ),
-            'konya' => array(
-                array('name' => 'Ankara Yolu', 'lat' => 37.9500, 'lon' => 32.4833),
-                array('name' => 'Meram Çevreyolu', 'lat' => 37.8500, 'lon' => 32.4500),
-                array('name' => 'Karaman Yolu', 'lat' => 37.8200, 'lon' => 32.5000),
-            ),
-            'adana' => array(
-                array('name' => 'Turhan Cemal Beriker', 'lat' => 37.0017, 'lon' => 35.3289),
-                array('name' => 'D-400 Mersin', 'lat' => 36.9850, 'lon' => 35.2900),
-                array('name' => 'Tarsus Otoyolu', 'lat' => 36.9917, 'lon' => 35.3500),
-            ),
-            'sanliurfa' => array(
-                array('name' => 'Diyarbakır Yolu', 'lat' => 37.1700, 'lon' => 38.8000),
-                array('name' => 'Mardin Yolu', 'lat' => 37.1500, 'lon' => 38.8200),
-            ),
-            'gaziantep' => array(
-                array('name' => 'İstasyon Caddesi', 'lat' => 37.0628, 'lon' => 37.3783),
-                array('name' => 'Suburcu Kavşağı', 'lat' => 37.0567, 'lon' => 37.3650),
-                array('name' => 'Adana Otoyolu', 'lat' => 37.0500, 'lon' => 37.4000),
-            ),
-            'kocaeli' => array(
-                array('name' => 'TEM Köprüsü', 'lat' => 40.7658, 'lon' => 29.9308),
-                array('name' => 'Gebze Çıkışı', 'lat' => 40.8028, 'lon' => 29.4308),
-                array('name' => 'D-100 Merkez', 'lat' => 40.7650, 'lon' => 29.9200),
-            ),
-            'mersin' => array(
-                array('name' => 'D-400 Merkez', 'lat' => 36.7950, 'lon' => 34.6200),
-                array('name' => 'Tarsus Yolu', 'lat' => 36.8100, 'lon' => 34.6500),
-            ),
-            'diyarbakir' => array(
-                array('name' => 'Elazığ Yolu', 'lat' => 37.9200, 'lon' => 40.2000),
-                array('name' => 'Mardin Yolu', 'lat' => 37.8800, 'lon' => 40.2200),
-            ),
-            'hatay' => array(
-                array('name' => 'Antakya Merkez', 'lat' => 36.2000, 'lon' => 36.1600),
-                array('name' => 'İskenderun Yolu', 'lat' => 36.5800, 'lon' => 36.1700),
-            ),
-            'manisa' => array(
-                array('name' => 'İzmir Yolu', 'lat' => 38.6200, 'lon' => 27.4000),
-                array('name' => 'Merkez Kavşak', 'lat' => 38.6150, 'lon' => 27.4300),
-            ),
-            'kayseri' => array(
-                array('name' => 'Sivas Yolu', 'lat' => 38.7500, 'lon' => 35.5000),
-                array('name' => 'Erciyes Yolu', 'lat' => 38.7200, 'lon' => 35.4500),
-            ),
-            'samsun' => array(
-                array('name' => 'Sahil Yolu', 'lat' => 41.2900, 'lon' => 36.3300),
-                array('name' => 'Ankara Yolu', 'lat' => 41.2700, 'lon' => 36.3500),
-            ),
-            'balikesir' => array(
-                array('name' => 'Bursa Yolu', 'lat' => 39.6500, 'lon' => 27.9000),
-                array('name' => 'İzmir Yolu', 'lat' => 39.6400, 'lon' => 27.8500),
-            ),
-            'tekirdag' => array(
-                array('name' => 'İstanbul Yolu', 'lat' => 41.0000, 'lon' => 27.5500),
-                array('name' => 'Çorlu Kavşağı', 'lat' => 41.1500, 'lon' => 27.8000),
-            ),
-            'aydin' => array(
-                array('name' => 'İzmir Yolu', 'lat' => 37.8500, 'lon' => 27.8200),
-                array('name' => 'Denizli Yolu', 'lat' => 37.8400, 'lon' => 27.8600),
-            ),
-            'van' => array(
-                array('name' => 'Erciş Yolu', 'lat' => 38.5200, 'lon' => 43.3500),
-                array('name' => 'İran Sınırı Yolu', 'lat' => 38.5000, 'lon' => 43.4500),
-            ),
-            'kahramanmaras' => array(
-                array('name' => 'Gaziantep Yolu', 'lat' => 37.5800, 'lon' => 36.9300),
-                array('name' => 'Adana Yolu', 'lat' => 37.5600, 'lon' => 36.9500),
-            ),
-            'sakarya' => array(
-                array('name' => 'TEM Otoyolu', 'lat' => 40.7400, 'lon' => 30.3500),
-                array('name' => 'İstanbul Yolu', 'lat' => 40.7500, 'lon' => 30.4000),
-            ),
-            'mugla' => array(
-                array('name' => 'Bodrum Yolu', 'lat' => 37.2100, 'lon' => 28.3500),
-                array('name' => 'Fethiye Yolu', 'lat' => 37.2200, 'lon' => 28.3800),
-            ),
-            'denizli' => array(
-                array('name' => 'İzmir Yolu', 'lat' => 37.7800, 'lon' => 29.0700),
-                array('name' => 'Antalya Yolu', 'lat' => 37.7700, 'lon' => 29.1000),
-            ),
-            'eskisehir' => array(
-                array('name' => 'Ankara Yolu', 'lat' => 39.7800, 'lon' => 30.5500),
-                array('name' => 'Bursa Yolu', 'lat' => 39.7700, 'lon' => 30.5000),
-            ),
-            'alanya' => array(
-                array('name' => 'D-400 Kaleiçi', 'lat' => 36.5437, 'lon' => 31.9994),
-            ),
-            'bodrum' => array(
-                array('name' => 'Turgutreis Yolu', 'lat' => 37.0344, 'lon' => 27.4305),
-            ),
-            'marmaris' => array(
-                array('name' => 'İçmeler Yolu', 'lat' => 36.8550, 'lon' => 28.2742),
-            ),
-            'fethiye' => array(
-                array('name' => 'Ölüdeniz Yolu', 'lat' => 36.6538, 'lon' => 29.1236),
-            ),
-            'belek' => array(
-                array('name' => 'Turizm Caddesi - Oteller Bölgesi', 'lat' => 36.8625, 'lon' => 31.0556),
-                array('name' => 'Belek Caddesi - Merkez Yönü', 'lat' => 36.8640, 'lon' => 31.0490),
-                array('name' => 'D-400 Serik-Belek Bağlantısı', 'lat' => 36.9150, 'lon' => 31.0620)
-            ),
-        );
-
-        if ( ! isset( $city_points[$cityKey] ) ) {
-            if ( empty( $lat ) || empty( $lon ) ) {
-                $lat = isset($_GET['lat']) ? sanitize_text_field($_GET['lat']) : null;
-                $lon = isset($_GET['lon']) ? sanitize_text_field($_GET['lon']) : null;
-            }
-            
-            if ( ! $lat || ! $lon ) {
-                return new WP_Error( 'invalid_city', 'Coordinates required for universal fallback evaluation.', array( 'status' => 400 ) );
-            }
-            
-            // Enforce unique coordinate-clustered grid hashing to eliminate multi-user cache collisions
-            $lat_r = round((float) $lat, 3);
-            $lon_r = round((float) $lon, 3);
-            $coord_hash = md5( $lat_r . '_' . $lon_r );
-            
-            $flow_cache_key = 'tg_flow_grid_v7_' . $coord_hash;
-            $road_cache_key = 'tg_road_geom_v7_' . $coord_hash;
-            
-            // Early Return Guard: Serve short-term flow metrics instantly if cached
-            $cached_flow = get_transient( $flow_cache_key );
-            if ( false !== $cached_flow ) {
-                return json_decode( $cached_flow, true );
-            }
-            
-            // Query live telemetry flow metrics for the closest functional road class segment
-            $flow_data = $this->fetch_tomtom_flow_direct( $lat, $lon );
-            if ( is_wp_error( $flow_data ) ) { return $flow_data; }
-            
-            $api_key = get_option( 'tedder_tomtom_api_key' );
-            if ( empty( $api_key ) ) { $api_key = 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5'; }
-            
-            // Read or write 30-day permanent road geometry metrics
-            $roadName = get_transient( $road_cache_key );
-            $resolvedLocationName = '';
-            
-            if ( false === $roadName ) {
-                $roadName = '';
-                
-                // Enterprise Standard: Extract coordinates directly from the matched TomTom Flow segment line array
-                $geocode_lat = $lat;
-                $geocode_lon = $lon;
-                if ( isset( $flow_data['flowSegmentData']['coordinates']['coordinate'][0]['latitude'] ) ) {
-                    $geocode_lat = $flow_data['flowSegmentData']['coordinates']['coordinate'][0]['latitude'];
-                    $geocode_lon = $flow_data['flowSegmentData']['coordinates']['coordinate'][0]['longitude'];
-                }
-                
-                // Reverse geocode the exact highway line instead of the town centroid
-                $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/${geocode_lat},${geocode_lon}.json?radius=1000&key=${api_key}";
-                $geocode_response = wp_remote_get( $geocode_url, array( 'timeout' => 5 ) );
-                
-                if ( ! is_wp_error( $geocode_response ) ) {
-                    $geocode_body = wp_remote_retrieve_body( $geocode_response );
-                    $geocode_json = json_decode( $geocode_body, true );
-                    $addr_meta = isset( $geocode_json['addresses'][0]['address'] ) ? $geocode_json['addresses'][0]['address'] : null;
-                    
-                    if ( $addr_meta ) {
-                        if ( isset( $addr_meta['streetName'] ) && ! empty( $addr_meta['streetName'] ) ) {
-                            $roadName = $addr_meta['streetName'];
-                        } elseif ( isset( $addr_meta['freeformAddress'] ) && ! empty( $addr_meta['freeformAddress'] ) ) {
-                            $addressParts = explode(',', $addr_meta['freeformAddress']);
-                            $roadName = trim($addressParts[0]);
-                        }
-                        
-                        // Connect Coords to Location: Map spatial neighborhood and municipality markers back to the view contract
-                        if ( isset( $addr_meta['neighbourhood'] ) && ! empty( $addr_meta['neighbourhood'] ) ) {
-                            $resolvedLocationName = $addr_meta['neighbourhood'];
-                        } elseif ( isset( $addr_meta['municipality'] ) && ! empty( $addr_meta['municipality'] ) ) {
-                            $resolvedLocationName = $addr_meta['municipality'];
-                        }
-                    }
-                }
-                
-                // Algorithmic Fallback Builder: Clean up if API metadata is generic, numeric noise, or missing
-                $cleanCityName = ucfirst(sanitize_text_field(trim($city)));
-                if ( empty( $roadName ) || $roadName === 'Bölgesel Yol Segmenti' || preg_match('/^\d+$/', $roadName) ) {
-                    $roadName = (strpos($cleanCityName, 'Konum') !== false && !empty($resolvedLocationName)) ? $resolvedLocationName : $cleanCityName;
-                    $roadName = $roadName . ' Giriş Arteri';
-                }
-                
-                set_transient( $road_cache_key, json_encode( array( 'road' => $roadName, 'loc' => $resolvedLocationName ) ), 30 * DAY_IN_SECONDS );
-            } else {
-                $decompressed = json_decode( $roadName, true );
-                $roadName = $decompressed['road'];
-                $resolvedLocationName = $decompressed['loc'];
-            }
-            
-            // Overwrite display city variable if geolocating a raw coordinate query string
-            $displayCityTitle = $city;
-            if ( ( strpos($city, 'konum') !== false || preg_match('/[0-9]/', $city) ) && ! empty( $resolvedLocationName ) ) {
-                $displayCityTitle = $resolvedLocationName;
-            }
-            
-            $speed = isset( $flow_data['flowSegmentData']['currentSpeed'] ) ? round($flow_data['flowSegmentData']['currentSpeed']) : 50;
-            $freeFlow = isset( $flow_data['flowSegmentData']['freeFlowSpeed'] ) ? round($flow_data['flowSegmentData']['freeFlowSpeed']) : 50;
-            $percent = $freeFlow > 0 ? max( 0, min( 100, round( ( 1 - ( $speed / $freeFlow ) ) * 100 ) ) ) : 0;
-            
-            $level = $percent > 50 ? 'severe' : ($percent > 35 ? 'high' : ($percent > 15 ? 'medium' : 'low'));
-            $levelDescriptions = array('low' => 'akıcı', 'medium' => 'yoğun', 'high' => 'çok yoğun', 'severe' => 'kilitli');
-            
-            $compiled_data = array(
-                'city'               => ucfirst(sanitize_text_field(trim($displayCityTitle))),
-                'currentSpeed'       => $speed,
-                'freeFlowSpeed'      => $freeFlow,
-                'currentTravelTime'  => 0,
-                'freeFlowTravelTime' => 0,
-                'confidence'         => 0.9,
-                'roadClosure'        => false,
-                'congestionLevel'    => $level,
-                'congestionPercent'  => (int)$percent,
-                'mainRoutes'         => array(
-                    array('name' => $roadName . ' (Canlı Akış)', 'delay' => $percent > 25 ? 4 : 0, 'status' => $percent > 40 ? 'congested' : 'normal')
-                ),
-                'narrative'          => ucfirst(trim($displayCityTitle)) . ' ve çevresinde anlık yol durumuna bağlı trafik akışı ' . $levelDescriptions[$level] . '.',
-                'lastUpdated'        => time() * 1000
+        if ( empty( $lat ) || empty( $lon ) ) {
+            $city_points = array(
+                'istanbul' => array('lat' => 41.0082, 'lon' => 28.9784),
+                'ankara'   => array('lat' => 39.9334, 'lon' => 32.8597),
+                'antalya'  => array('lat' => 36.8841, 'lon' => 30.7056),
+                'izmir'    => array('lat' => 38.4237, 'lon' => 27.1428),
+                'bursa'    => array('lat' => 40.1825, 'lon' => 29.0625)
             );
-            
-            set_transient( $flow_cache_key, json_encode( $compiled_data ), 300 );
-            return $compiled_data;
+            if ( isset( $city_points[$cityKey] ) ) {
+                $lat = $city_points[$cityKey]['lat'];
+                $lon = $city_points[$cityKey]['lon'];
+            }
         }
 
-        $points = $city_points[$cityKey];
-        $totalCurrentSpeed = 0;
-        $totalFreeFlowSpeed = 0;
-        $validPoints = 0;
-        $mainRoutes = array();
+        if ( ! $lat || ! $lon ) {
+            return new WP_Error( 'invalid_coords', 'State hydration parameter tracking mismatch.', array( 'status' => 400 ) );
+        }
 
-        foreach ( $points as $point ) {
-            $lat = $point['lat'];
-            $lon = $point['lon'];
-            $flow = $this->fetch_tomtom_flow_direct( $lat, $lon );
+        $lat_r = round((float) $lat, 3);
+        $lon_r = round((float) $lon, 3);
+        $coord_hash = md5( $lat_r . '_' . $lon_r );
+        
+        $flow_cache_key = 'tg_flow_v9_' . $coord_hash;
+        $road_cache_key = 'tg_road_v9_' . $coord_hash;
 
-            if ( $flow && ! is_wp_error( $flow ) && isset( $flow['flowSegmentData'] ) ) {
-                $data = $flow['flowSegmentData'];
-                $validPoints++;
-                $currentSpeed = isset( $data['currentSpeed'] ) ? $data['currentSpeed'] : 0;
-                $freeFlowSpeed = isset( $data['freeFlowSpeed'] ) ? $data['freeFlowSpeed'] : 50;
-                $currentTravelTime = isset( $data['currentTravelTime'] ) ? $data['currentTravelTime'] : 0;
-                $freeFlowTravelTime = isset( $data['freeFlowTravelTime'] ) ? $data['freeFlowTravelTime'] : 0;
+        $cached_flow = get_transient( $flow_cache_key );
+        if ( false !== $cached_flow ) {
+            return json_decode( $cached_flow, true );
+        }
 
-                $totalCurrentSpeed += $currentSpeed;
-                $totalFreeFlowSpeed += $freeFlowSpeed;
+        $flow_data = $this->fetch_tomtom_flow_direct( $lat, $lon );
+        if ( is_wp_error( $flow_data ) ) { return $flow_data; }
 
-                $delaySeconds = $currentTravelTime - $freeFlowTravelTime;
-                $delayMinutes = max( 0, round( $delaySeconds / 60 ) );
+        $api_key = get_option( 'tedder_tomtom_api_key' );
+        if ( empty( $api_key ) ) { $api_key = 'qUlGJOObY34eaqSXZto9H0OVWfGYqhP5'; }
 
-                $speedRatio = $freeFlowSpeed > 0 ? $currentSpeed / $freeFlowSpeed : 1;
-                $status = 'normal';
-                if ( $speedRatio < 0.3 ) {
-                    $status = 'congested';
-                } elseif ( $speedRatio < 0.6 ) {
-                    $status = 'slow';
+        $stored_road_data = get_transient( $road_cache_key );
+        if ( false === $stored_road_data ) {
+            $geocode_lat = isset($flow_data['flowSegmentData']['coordinates']['coordinate'][0]['latitude']) ? $flow_data['flowSegmentData']['coordinates']['coordinate'][0]['latitude'] : $lat;
+            $geocode_lon = isset($flow_data['flowSegmentData']['coordinates']['coordinate'][0]['longitude']) ? $flow_data['flowSegmentData']['coordinates']['coordinate'][0]['longitude'] : $lon;
+
+            $geocode_url = "https://api.tomtom.com/search/2/reverseGeocode/${geocode_lat},${geocode_lon}.json?radius=1000&key=${api_key}";
+            $geocode_response = wp_remote_get( $geocode_url, array( 'timeout' => 5 ) );
+
+            if ( ! is_wp_error( $geocode_response ) ) {
+                $geocode_body = wp_remote_retrieve_body( $geocode_response );
+                $geocode_json = json_decode( $geocode_body, true );
+                $addr = isset( $geocode_json['addresses'][0]['address'] ) ? $geocode_json['addresses'][0]['address'] : null;
+                if ( $addr ) {
+                    $roadName = !empty($addr['streetName']) ? $addr['streetName'] : (!empty($addr['freeformAddress']) ? trim(explode(',', $addr['freeformAddress'])[0]) : '');
+                    $resolvedLocationName = !empty($addr['neighbourhood']) ? $addr['neighbourhood'] : (!empty($addr['municipality']) ? $addr['municipality'] : '');
                 }
-
-                $mainRoutes[] = array(
-                    'name'   => $point['name'],
-                    'delay'  => (int)$delayMinutes,
-                    'status' => $status
-                );
             }
-        }
 
-        if ( $validPoints === 0 ) {
-            return new WP_Error( 'no_traffic_data', 'No valid traffic data could be fetched for this city', array( 'status' => 502 ) );
-        }
-
-        $avgCurrentSpeed = $totalCurrentSpeed / $validPoints;
-        $avgFreeFlowSpeed = $totalFreeFlowSpeed / $validPoints;
-
-        $speedRatio = $avgFreeFlowSpeed > 0 ? $avgCurrentSpeed / $avgFreeFlowSpeed : 1;
-        $congestionPercent = round( ( 1 - $speedRatio ) * 100 );
-        $congestionPercent = max( 0, min( 100, $congestionPercent ) );
-
-        $congestionLevel = 'low';
-        if ( $speedRatio >= 0.75 ) {
-            $congestionLevel = 'low';
-        } elseif ( $speedRatio >= 0.5 ) {
-            $congestionLevel = 'medium';
-        } elseif ( $speedRatio >= 0.25 ) {
-            $congestionLevel = 'high';
+            $cleanCityName = ucfirst(sanitize_text_field(trim($city)));
+            if ( empty( $roadName ) || $roadName === 'Bölgesel Yol Segmenti' || preg_match('/^\d+$/', $roadName) ) {
+                $roadName = (!empty($resolvedLocationName) && strpos($cleanCityName, 'Konum') !== false) ? $resolvedLocationName : $cleanCityName;
+                $roadName = $roadName . ' Giriş Arteri';
+            }
+            
+            $road_payload = array( 'road' => $roadName, 'loc' => $resolvedLocationName );
+            set_transient( $road_cache_key, json_encode( $road_payload ), 30 * DAY_IN_SECONDS );
         } else {
-            $congestionLevel = 'severe';
+            $road_payload = json_decode( $stored_road_data, true );
+            $roadName = $road_payload['road'];
+            $resolvedLocationName = $road_payload['loc'];
         }
 
-        // Sort routes by delay desc
-        usort( $mainRoutes, function( $a, $b ) {
-            return $b['delay'] - $a['delay'];
-        });
+        $displayTitle = $city;
+        if ( (preg_match('/[0-9]/', $city) || strpos(strtolower($city), 'konum') !== false) && !empty($resolvedLocationName) ) {
+            $displayTitle = $resolvedLocationName;
+        }
 
-        $levelDescriptions = array(
-            'low'    => 'akıcı',
-            'medium' => 'yoğun',
-            'high'   => 'çok yoğun',
-            'severe' => 'kilitli durumda'
-        );
-        
-        $displayCity = ucfirst( $city );
-        $narrative = $displayCity . ' trafiği ' . $levelDescriptions[$congestionLevel] . '.';
-        if ( count( $mainRoutes ) > 0 && $mainRoutes[0]['delay'] > 5 ) {
-            $narrative .= ' ' . $mainRoutes[0]['name'] . ' güzergahında ' . $mainRoutes[0]['delay'] . ' dakika gecikme var.';
-        }
-        
-        $congestedCount = 0;
-        foreach ( $mainRoutes as $r ) {
-            if ( $r['status'] === 'congested' ) {
-                $congestedCount++;
-            }
-        }
-        if ( $congestedCount > 1 ) {
-            $narrative .= ' ' . $congestedCount . ' ana güzergahta yoğunluk mevcut.';
-        }
+        $speed = isset( $flow_data['flowSegmentData']['currentSpeed'] ) ? round($flow_data['flowSegmentData']['currentSpeed']) : 50;
+        $freeFlow = isset( $flow_data['flowSegmentData']['freeFlowSpeed'] ) ? round($flow_data['flowSegmentData']['freeFlowSpeed']) : 50;
+        $percent = $freeFlow > 0 ? max( 0, min( 100, round( ( 1 - ( $speed / $freeFlow ) ) * 100 ) ) ) : 0;
+        $level = $percent > 50 ? 'severe' : ($percent > 35 ? 'high' : ($percent > 15 ? 'medium' : 'low'));
+        $levelDescriptions = array('low' => 'akıcı', 'medium' => 'yoğun', 'high' => 'çok yoğun', 'severe' => 'kilitli');
 
         $compiled_data = array(
-            'city'               => $city,
-            'currentSpeed'       => round( $avgCurrentSpeed ),
-            'freeFlowSpeed'      => round( $avgFreeFlowSpeed ),
+            'city'               => ucfirst(sanitize_text_field(trim($displayTitle))),
+            'currentSpeed'       => $speed,
+            'freeFlowSpeed'      => $freeFlow,
             'currentTravelTime'  => 0,
             'freeFlowTravelTime' => 0,
             'confidence'         => 0.9,
             'roadClosure'        => false,
-            'congestionLevel'    => $congestionLevel,
-            'congestionPercent'  => (int)$congestionPercent,
-            'mainRoutes'         => array_slice( $mainRoutes, 0, 6 ),
-            'narrative'          => $narrative,
+            'congestionLevel'    => $level,
+            'congestionPercent'  => (int)$percent,
+            'mainRoutes'         => array(
+                array('name' => $roadName . ' (Canlı Akış)', 'delay' => $percent > 25 ? 4 : 0, 'status' => $percent > 40 ? 'congested' : 'normal')
+            ),
+            'narrative'          => ucfirst(trim($displayTitle)) . ' ve çevresinde anlık yol durumuna bağlı trafik akışı ' . $levelDescriptions[$level] . '.',
             'lastUpdated'        => time() * 1000
         );
 
-        // Cache the aggregated city data for 5 minutes (300 seconds)
-        set_transient( $cache_key, json_encode( $compiled_data ), 300 );
-
+        set_transient( $flow_cache_key, json_encode( $compiled_data ), 300 );
         return $compiled_data;
     }
 
