@@ -51,7 +51,7 @@ class TedderWeatherEngine
             ));
 
             // 2. Tiles proxy endpoint: proxies TomTom traffic map tile requests securely
-            register_rest_route('sinan/v1', '/traffic-tiles/(?P<z>\d+)/(?P<x>\d+)/(?P<y>\d+)', array(
+            register_rest_route('sinan/v1', '/traffic-tiles/(?P<z>\d+)/(?P<x>\d+)/(?P<y>[\d\w\.]+)', array(
                 'methods' => 'GET',
                 'callback' => function($request) {
                     $current_loads = get_transient('tomtom_map_loads_today');
@@ -61,9 +61,9 @@ class TedderWeatherEngine
                         exit;
                     }
 
-                    $z = $request->get_param('z');
-                    $x = $request->get_param('x');
-                    $y = $request->get_param('y');
+                    $z = intval($request['z']);
+                    $x = intval($request['x']);
+                    $y = intval($request['y']);
 
                     $key = get_option('tedder_tomtom_api_key', '');
                     if (empty($key)) {
@@ -82,16 +82,12 @@ class TedderWeatherEngine
                         exit;
                     }
 
-                    $body = wp_remote_retrieve_body($response);
-                    $content_type = wp_remote_retrieve_header($response, 'content-type');
-                    if (empty($content_type)) {
-                        $content_type = 'image/png';
-                    }
+                    $image_data = wp_remote_retrieve_body($response);
 
-                    // AMENDMENT 1: Emit aggressive browser caching headers
-                    header("Content-Type: " . $content_type);
-                    header("Cache-Control: public, max-age=900, stale-while-revalidate=60");
-                    echo $body;
+                    // Force binary image streaming and bypass default WP JSON encoding
+                    header('Content-Type: image/png');
+                    header('Cache-Control: public, max-age=900, stale-while-revalidate=60');
+                    echo $image_data;
                     exit;
                 },
                 'permission_callback' => '__return_true'
