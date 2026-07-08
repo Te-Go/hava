@@ -383,7 +383,7 @@ export const getWeatherDataByCoords = async (
       try {
         // Use coordinates directly - no geocoding needed
         // UPDATED: forecast_hours=360 to cover full 15 days of hourly data (15 * 24 = 360) for Accordion
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,cloud_cover,visibility&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,is_day,visibility&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,apparent_temperature_max,uv_index_max&forecast_days=15&forecast_hours=360&timezone=auto`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,cloud_cover,visibility&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,is_day,visibility,snow_depth&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,apparent_temperature_max,uv_index_max&forecast_days=15&forecast_hours=360&timezone=auto`;
 
         const response = await fetch(url);
         if (!response.ok) throw new Error('Open-Meteo API Failed');
@@ -652,6 +652,12 @@ export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<W
   const daily = data.daily;
   const isDay = current.is_day === 1;
 
+  // Map Open-Meteo's official, native snow_depth array parameter directly into the frontend model contracts (convert meters to cm)
+  let nowIndexTemp = hourly.time.findIndex((t: string) => t >= current.time);
+  const safeIndex = nowIndexTemp !== -1 ? nowIndexTemp : 0;
+  const snowDepthMeters = hourly.snow_depth?.[safeIndex] ?? 0;
+  const snowDepth = Math.round(snowDepthMeters * 100);
+
   let nowIndex = hourly.time.findIndex((t: string) => t >= current.time);
   if (nowIndex === -1) {
     const currentMs = current.time ? new Date(current.time + 'Z').getTime() : Date.now();
@@ -767,7 +773,8 @@ export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<W
     currentUtcMs,
     cloudCover: current.cloud_cover ?? 0,
     hourly: hourlyData,
-    daily: dailyData
+    daily: dailyData,
+    snowDepth
   };
 };
 
@@ -1034,7 +1041,7 @@ export const getWeatherData = async (city: string): Promise<WeatherData> => {
       }
     }
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,cloud_cover&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,apparent_temperature_max,uv_index_max&forecast_days=15&forecast_hours=360&timezone=auto`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,cloud_cover&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,uv_index,is_day,snow_depth&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,apparent_temperature_max,uv_index_max&forecast_days=15&forecast_hours=360&timezone=auto`;
 
     const response = await fetch(url);
     if (!response.ok) throw new Error('Open-Meteo API Failed');

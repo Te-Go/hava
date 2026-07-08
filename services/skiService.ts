@@ -63,21 +63,23 @@ export function calculateSkiConditions(
     precipitation: number,  
     windSpeed: number,      
     cloudCover: number,     
-    snowfallMm: number = 0  
+    snowfallMm: number = 0,
+    snowDepthFromApi?: number
 ): SkiData | null {
     const resolvedKey = resolveSkiCityKey(cityKey);
     const resort = SKI_RESORTS[resolvedKey];
     if (!resort) return null;
 
-    const month = new Date().getMonth() + 1;
-    const inSeason = currentTemp <= 4 && (month >= 11 || month <= 4);
+    // Enforce the seasonal view gate: active only when month index is >= 10 or <= 3 (1-indexed)
+    const month = new Date().getUTCMonth() + 1;
+    const inSeason = month >= 10 || month <= 3;
 
     const elevationDiff = (resort.elevation.summit - resort.elevation.base) / 1000;
     const summitTemp = Math.round(currentTemp - (elevationDiff * 6.5));
 
-    let snowDepth = inSeason ? 75 : 0;
+    // Bind directly to Open-Meteo's official snow depth (API returns in meters, map to cm)
+    const snowDepth = inSeason ? (snowDepthFromApi !== undefined ? snowDepthFromApi : 0) : 0;
     let freshSnow = (summitTemp <= 0 && precipitation > 0) ? Math.round(precipitation * 10) : 0;
-    if (freshSnow > 0) snowDepth += freshSnow;
 
     const snowCondition = !inSeason ? 'closed' : freshSnow > 15 ? 'powder' : currentTemp > 2 ? 'slushy' : 'packed';
     const avalancheRisk = freshSnow > 30 ? 'high' : freshSnow > 10 ? 'moderate' : 'low';

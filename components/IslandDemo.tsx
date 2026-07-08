@@ -88,7 +88,8 @@ const IslandDemo: React.FC = () => {
                         10,  // precipitation mm
                         20,  // windSpeed
                         40,  // cloudCover
-                        0    // snowfallMm
+                        0,   // snowfallMm
+                        85   // snowDepthFromApi in cm
                     );
                     setSkiData(ski);
                 }

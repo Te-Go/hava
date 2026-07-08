@@ -26,7 +26,7 @@ interface InteractiveRadarMapProps {
     isDarkMode?: boolean;
 }
 
-type LayerType = 'radar' | 'temp' | 'wind';
+type LayerType = 'radar' | 'temp' | 'wind' | 'traffic';
 
 const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, isDarkMode = true }) => {
     if (typeof window === 'undefined') {
@@ -42,8 +42,11 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const tileLayerRef = useRef<any>(null);
     const radarOverlayRef = useRef<any>(null);
+    const trafficLayerRef = useRef<any>(null);
     const markersGroupRef = useRef<any>(null);
     const contextMarkerRef = useRef<any>(null);
+    const [tomtomKey, setTomtomKey] = useState<string | null>(null);
+    const [trafficError, setTrafficError] = useState<boolean>(false);
 
     // Compile compass headings or string directions back to numbers safely
     const parseWindDirectionToDegrees = (val: any): number => {
@@ -131,6 +134,30 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
         fetchCitiesWeather();
     }, []);
 
+    // Fetch traffic configuration and enforce safety cap fallback
+    useEffect(() => {
+        if (activeLayer === 'traffic' && !tomtomKey && !trafficError) {
+            const fetchTrafficConfig = async () => {
+                try {
+                    const response = await fetch('/wp-json/sinan/v1/traffic-config');
+                    if (!response.ok) throw new Error('Traffic config fetch failed');
+                    const data = await response.json();
+                    if (data?.status === 'CIRCUIT_BREAKER_ACTIVE' || !data?.success) {
+                        setTrafficError(true);
+                    } else if (data?.apiKey) {
+                        setTomtomKey(data.apiKey);
+                    } else {
+                        setTrafficError(true);
+                    }
+                } catch (err) {
+                    console.error('[Traffic] Config fetch failed:', err);
+                    setTrafficError(true);
+                }
+            };
+            fetchTrafficConfig();
+        }
+    }, [activeLayer, tomtomKey, trafficError]);
+
     useEffect(() => {
         let isMounted = true;
         if (!mapRef.current && mapContainerRef.current) {
@@ -194,6 +221,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
             const L = await import('leaflet');
 
             if (radarOverlayRef.current) { map.removeLayer(radarOverlayRef.current); radarOverlayRef.current = null; }
+            if (trafficLayerRef.current) { map.removeLayer(trafficLayerRef.current); trafficLayerRef.current = null; }
             if (markersGroupRef.current) markersGroupRef.current.clearLayers();
             if (contextMarkerRef.current) { map.removeLayer(contextMarkerRef.current); contextMarkerRef.current = null; }
 
@@ -251,6 +279,13 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                     radarLayer.addTo(map);
                     radarOverlayRef.current = radarLayer;
                 }
+            } else if (safeLayer === 'traffic') {
+                if (tomtomKey) {
+                    const trafficUrl = `https://a.api.tomtom.com/traffic/map/4/tile/flow/relative-delay/{z}/{x}/{y}.png?key=${tomtomKey}`;
+                    const trafficLayer = L.tileLayer(trafficUrl, { opacity: 0.85, maxZoom: 18 });
+                    trafficLayer.addTo(map);
+                    trafficLayerRef.current = trafficLayer;
+                }
             } else if (safeLayer === 'temp') {
                 activeCitiesList.forEach((city) => {
                     const tempVal = Math.round(city?.temp ?? 15);
@@ -299,12 +334,23 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
             <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-center pointer-events-none">
                 <div className="flex bg-slate-950/80 dark:bg-slate-900/90 backdrop-blur-md rounded-xl p-1.5 border border-white/10 shadow-lg pointer-events-auto gap-1">
                     <button onClick={() => setActiveLayer('radar')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 flex items-center ${activeLayer === 'radar' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><Icon.CloudRain className="w-3.5 h-3.5 mr-1.5" />Yağış Radarı</button>
+                    <button onClick={() => setActiveLayer('traffic')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 flex items-center ${activeLayer === 'traffic' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><Icon.Car className="w-3.5 h-3.5 mr-1.5" />Trafik Durumu</button>
                     <button onClick={() => setActiveLayer('temp')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 flex items-center ${activeLayer === 'temp' ? 'bg-orange-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><Icon.Thermometer className="w-3.5 h-3.5 mr-1.5" />Sıcaklık</button>
                     <button onClick={() => setActiveLayer('wind')} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-300 flex items-center ${activeLayer === 'wind' ? 'bg-green-600 text-white shadow-md' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}><Icon.Wind className="w-3.5 h-3.5 mr-1.5" />Rüzgar</button>
                 </div>
                 <div className="hidden sm:flex bg-slate-950/80 dark:bg-slate-900/90 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10 shadow-lg text-[10px] font-semibold text-slate-300 items-center pointer-events-auto"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping mr-2"></span>Canlı Meteoroloji Radarı</div>
             </div>
             <div className={`relative w-full h-[350px] md:h-[400px] lg:h-[450px] z-0 ${isDarkMode ? 'dark-map' : ''}`}>
+                {activeLayer === 'traffic' && trafficError && (
+                    <div className="absolute inset-0 bg-slate-50 dark:bg-slate-900 z-[1000] flex items-center justify-center border border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-medium text-center px-4">
+                        Yoğunluk nedeniyle şu an canlı harita yüklenemiyor.
+                    </div>
+                )}
+                {activeLayer === 'traffic' && !tomtomKey && !trafficError && (
+                    <div className="absolute inset-0 bg-slate-50 dark:bg-slate-900 z-[1000] flex items-center justify-center border border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-sm animate-pulse">
+                        Canlı Yol Durumu Yükleniyor...
+                    </div>
+                )}
                 <style>{`
                     .dark-map .leaflet-layer:first-child .leaflet-tile-container { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) !important; }
                     .leaflet-popup-content-wrapper { background: rgba(30, 41, 59, 0.95) !important; color: #f8fafc !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; backdrop-filter: blur(10px) !important; border-radius: 12px !important; overflow: hidden; }

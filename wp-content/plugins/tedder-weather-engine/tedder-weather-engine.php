@@ -23,6 +23,35 @@ class TedderWeatherEngine
     {
         $this->log_file = dirname(__FILE__) . '/seo_events.log';
 
+        // Register /traffic-config REST API route with Transient circuit breaker
+        add_action('rest_api_init', function () {
+            register_rest_route('sinan/v1', '/traffic-config', array(
+                'methods' => 'GET',
+                'callback' => function() {
+                    $current_loads = get_transient('tomtom_map_loads_today');
+                    if ($current_loads === false) {
+                        $current_loads = 0;
+                    }
+                    
+                    if ($current_loads >= 2400) {
+                        return new WP_REST_Response(array(
+                            'success' => false,
+                             'status' => 'CIRCUIT_BREAKER_ACTIVE'
+                        ), 200);
+                    }
+                    
+                    set_transient('tomtom_map_loads_today', $current_loads + 1, DAY_IN_SECONDS);
+                    
+                    $key = get_option('tedder_tomtom_api_key', '');
+                    return new WP_REST_Response(array(
+                        'success' => true,
+                        'apiKey' => $key
+                    ), 200);
+                },
+                'permission_callback' => '__return_true'
+             ));
+         });
+
         // SERVER-SIDE CLEANUP: Delete the stale crashing weather-app.js from all possible directories
         add_action('init', function() {
             $paths = [];

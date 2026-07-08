@@ -643,7 +643,9 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                 safeWeatherData.currentTemp,
                 safeWeatherData.rainVolume || 0,
                 safeWeatherData.windSpeed,
-                safeWeatherData.cloudCover || 0
+                safeWeatherData.cloudCover || 0,
+                0,
+                safeWeatherData.snowDepth
              );
              setSkiData(calculatedSki);
           } else setSkiData(null);
@@ -698,7 +700,9 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                   newWeatherData.currentTemp,
                   newWeatherData.rainVolume || 0,
                   newWeatherData.windSpeed,
-                  newWeatherData.cloudCover || 0
+                  newWeatherData.cloudCover || 0,
+                  0,
+                  newWeatherData.snowDepth
                );
                setSkiData(calculatedSki);
             } else setSkiData(null);
