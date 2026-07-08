@@ -973,7 +973,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                 />
 
                 {/* Apple MapKit JS Traffic Map Widget for Tier 1 Cities */}
-                {view.type !== '15-days' && ['istanbul', 'antalya', 'ankara', 'izmir', 'bursa'].includes(toSlug(currentCity)) && displayData && (
+                {view.type !== '15-days' && ['istanbul', 'antalya', 'ankara', 'izmir', 'bursa'].includes(toSlug(currentCity).toLowerCase()) && displayData && (
                   <div className="w-full mb-6">
                     <TrafficMapWidget 
                       lat={displayData.coord.lat} 

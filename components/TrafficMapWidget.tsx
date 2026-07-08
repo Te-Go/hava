@@ -12,8 +12,18 @@ export const TrafficMapWidget: React.FC<TrafficMapProps> = ({ lat, lon, cityName
   const [scriptReady, setScriptReady] = useState<boolean>(typeof window !== 'undefined' && !!(window as any).mapkit);
   const [loadError, setLoadError] = useState<boolean>(false);
 
-  // Hook 1: Handle asynchronous script lifecycle safely
+  // Hook 1: Handle asynchronous script and stylesheet lifecycle safely
   useEffect(() => {
+    // Inject mandatory Apple MapKit CSS stylesheet if not present
+    const cssId = 'apple-mapkit-js-styles';
+    if (!document.getElementById(cssId)) {
+      const link = document.createElement('link');
+      link.id = cssId;
+      link.rel = 'stylesheet';
+      link.href = 'https://cdn.apple-mapkit.com/mk/6/mapkit.css';
+      document.head.appendChild(link);
+    }
+
     if ((window as any).mapkit) {
       setScriptReady(true);
       return;
