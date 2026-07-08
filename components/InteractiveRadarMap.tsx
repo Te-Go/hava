@@ -286,7 +286,8 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
             } else if (safeLayer === 'traffic') {
                 // AMENDMENT 2: Securely load from local WordPress proxy route
                 if (trafficChecked && !trafficError) {
-                    const trafficUrl = '/wp-json/sinan/v1/traffic-tiles/{z}/{x}/{y}';
+                    const styleParam = isDarkMode ? 'relative0-dark' : 'relative0';
+                    const trafficUrl = `/wp-json/sinan/v1/traffic-tiles/{z}/{x}/{y}?style=${styleParam}`;
                     const trafficLayer = L.tileLayer(trafficUrl, { opacity: 0.85, maxZoom: 18 });
                     trafficLayer.addTo(map);
                     trafficLayerRef.current = trafficLayer;
@@ -332,7 +333,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
             }
         };
         updateLayers();
-    }, [activeLayer, cityWeatherData, radarConfig, mapReady, weatherData, trafficChecked, trafficError]);
+    }, [activeLayer, cityWeatherData, radarConfig, mapReady, weatherData, trafficChecked, trafficError, isDarkMode]);
 
     return (
         <div className="w-full relative rounded-xl overflow-hidden shadow-lg border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900 transition-colors duration-300">

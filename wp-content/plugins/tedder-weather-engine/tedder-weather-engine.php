@@ -65,6 +65,12 @@ class TedderWeatherEngine
                     $x = intval($request['x']);
                     $y = intval($request['y']);
 
+                    // Whitelist style parameter to prevent injection and default to relative0
+                    $style = $request->get_param('style');
+                    if (empty($style) || !in_array($style, array('relative0', 'relative0-dark', 'relative-delay'))) {
+                        $style = 'relative0';
+                    }
+
                     $key = get_option('tedder_tomtom_api_key', '');
                     if (empty($key)) {
                         status_header(404);
@@ -72,7 +78,7 @@ class TedderWeatherEngine
                         exit;
                     }
 
-                    $url = "https://a.api.tomtom.com/traffic/map/4/tile/flow/relative-delay/${z}/${x}/${y}.png?key=${key}";
+                    $url = "https://a.api.tomtom.com/traffic/map/4/tile/flow/${style}/${z}/${x}/${y}.png?key=${key}";
 
                     // AMENDMENT 1: Strict 3-second connection timeout
                     $response = wp_remote_get($url, array('timeout' => 3));
