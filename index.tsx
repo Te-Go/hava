@@ -3,9 +3,10 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { WidgetErrorBoundary } from './components/WidgetErrorBoundary';
 
+import { TrafficMapWidget } from './components/TrafficMapWidget';
+
 // Island Components
 import {
-  TrafficWidget,
   MarineWidget,
   SkiConditions,
   AgricultureWidget,
@@ -59,11 +60,10 @@ if (payload && payload.modules) {
       ReactDOM.createRoot(trafficRoot).render(
         <React.StrictMode>
           <WidgetErrorBoundary>
-            <TrafficWidget 
-              data={payload.weatherData?.trafficData} 
-              city={payload.city} 
-              cityDisplay={payload.city}
-              lastUpdated={Date.now()}
+            <TrafficMapWidget 
+              lat={payload.weatherData?.latitude || 39.9334} 
+              lon={payload.weatherData?.longitude || 32.8597} 
+              cityName={payload.city} 
             />
           </WidgetErrorBoundary>
         </React.StrictMode>

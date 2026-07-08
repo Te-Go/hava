@@ -1,5 +1,5 @@
 import React from 'react';
-import TrafficWidget from './TrafficWidget';
+
 import MarineWidget from './MarineWidget';
 import SkiConditions from './SkiConditions';
 import RegionalSummary from './RegionalSummary';
@@ -9,7 +9,7 @@ import FireRiskWidget from './FireRiskWidget';
 import TourismWidget from './TourismWidget';
 import IslandNarration, { generateIslandNarratives } from './IslandNarration';
 
-import type { TomTomTrafficData } from '../services/tomtomTrafficService';
+
 import type { MarineData } from '../services/marineService';
 import type { SkiData } from '../services/skiService';
 import type { AgricultureData } from '../services/agricultureService';
@@ -20,7 +20,7 @@ import type { IslandCategory } from '../shared/provinceIslandMap';
 
 interface IslandPanelProps {
     // Existing data types
-    traffic?: TomTomTrafficData | null;
+    traffic?: any;
     marine?: MarineData | null;
     ski?: SkiData | null;
 
@@ -131,17 +131,7 @@ const IslandPanel: React.FC<IslandPanelProps> = ({
 
                         {/* LEFT COLUMN (Stack): Traffic & Marine (40%) */}
                         <div className="w-full md:w-[40%] flex flex-col gap-4">
-                            {hasTraffic && (
-                                <div className="w-full">
-                                    <TrafficWidget
-                                        city={cityDisplay}
-                                        cityDisplay={trafficCityDisplay || cityDisplay}
-                                        data={traffic}
-                                        narrative={trafficNarrative}
-                                        lastUpdated={lastUpdated}
-                                    />
-                                </div>
-                            )}
+
                             {hasMarine && (
                                 <div className="w-full">
                                     <MarineWidget
@@ -184,18 +174,7 @@ const IslandPanel: React.FC<IslandPanelProps> = ({
                     // Used when Tourism is missing or we only have single widgets
                     // ════════════════════════════════════════════════════════════════
                     <div className={widgetCount === 1 ? 'flex flex-col items-center' : 'grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch'}>
-                        {/* Traffic Widget */}
-                        {hasTraffic && (
-                            <div className={`${widgetCount === 1 ? 'w-full md:max-w-lg' : 'w-full'} h-full`}>
-                                <TrafficWidget
-                                    city={cityDisplay}
-                                    cityDisplay={trafficCityDisplay || cityDisplay}
-                                    data={traffic}
-                                    narrative={trafficNarrative}
-                                    lastUpdated={lastUpdated}
-                                />
-                            </div>
-                        )}
+
 
                         {/* Marine Widget */}
                         {hasMarine && (

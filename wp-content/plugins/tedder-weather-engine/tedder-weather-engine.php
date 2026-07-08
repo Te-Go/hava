@@ -269,14 +269,13 @@ add_filter('query_vars', 'tedder_register_query_vars');
 
 
 
+
 // Load the Centralized Data Engine (Tier 1 Proactive Sync)
 require_once plugin_dir_path(__FILE__) . 'tedder-data-engine.php';
 
 // Load the Weather Bridge integration (Tier 2 Reactive JIT)
 require_once plugin_dir_path(__FILE__) . 'sinan-weather-bridge/sinan-weather-bridge.php';
 
-// Load the Secure API Proxy
-require_once plugin_dir_path(__FILE__) . 'tedder-api-proxy.php';
 
 /**
  * Tedder Configuration Admin Page

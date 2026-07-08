@@ -44,7 +44,7 @@ import { Icon } from './components/Icons';
 // Islands & Services
 import { IslandPanel } from './islands';
 import { fetchMarineData, isCoastalCity, type MarineData } from './services/marineService';
-import { fetchTrafficData, hasTrafficMonitoring, type TomTomTrafficData } from './services/tomtomTrafficService';
+import { TrafficMapWidget } from './components/TrafficMapWidget';
 import { hasSkiResort, resolveSkiCityKey, calculateSkiConditions, type SkiData } from './services/skiService';
 import { mapOpenMeteoToModel } from './services/weatherService';
 import { findNearestHub } from './services/locationUtils'; // Hub & Spoke Logic
@@ -57,9 +57,7 @@ import { calculateTourismComfort, isTourismRegion, type TourismData } from './se
 import { getIslandCategory } from './shared/provinceIslandMap';
 import { injectSEOSchemas } from './services/seoSchemaService';
 
-// TomTom API Key
-// TomTom API Key - Secured via Environment Variables
-const TOMTOM_API_KEY = import.meta.env.VITE_TOMTOM_API_KEY || '';
+
 
 type ViewState =
   | { type: 'home' }
@@ -251,8 +249,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
   // Island Data State
   const [marineData, setMarineData] = useState<MarineData | null>(null);
   const [marineCityDisplay, setMarineCityDisplay] = useState<string | undefined>(undefined);
-  const [trafficData, setTrafficData] = useState<TomTomTrafficData | null>(null);
-  const [trafficCityDisplay, setTrafficCityDisplay] = useState<string | undefined>(undefined);
+
   const [skiData, setSkiData] = useState<SkiData | null>(null);
 
   // New Island Data State
@@ -634,9 +631,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
           const currentLat = safeWeatherData?.coord?.lat || (window as any).SinanWeatherPayload?.weatherData?.latitude;
           const currentLon = safeWeatherData?.coord?.lon || (window as any).SinanWeatherPayload?.weatherData?.longitude;
           
-          fetchTrafficData(citySlug, currentLat, currentLon)
-            .then(setTrafficData)
-            .catch(() => setTrafficData(null));
+
 
           if (isCoastalCity(citySlug)) {
              fetchMarineData(citySlug).then(setMarineData).catch(() => setMarineData(null));
@@ -691,9 +686,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
             const currentLat = newWeatherData?.coord?.lat || (window as any).SinanWeatherPayload?.weatherData?.latitude;
             const currentLon = newWeatherData?.coord?.lon || (window as any).SinanWeatherPayload?.weatherData?.longitude;
             
-            fetchTrafficData(citySlug, currentLat, currentLon)
-              .then(setTrafficData)
-              .catch(() => setTrafficData(null));
+
 
             if (isCoastalCity(citySlug)) {
                fetchMarineData(citySlug).then(setMarineData).catch(() => setMarineData(null));
@@ -978,6 +971,17 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                   activeView={view.type}
                   onToggleView={handleViewToggle}
                 />
+
+                {/* Apple MapKit JS Traffic Map Widget for Tier 1 Cities */}
+                {view.type !== '15-days' && ['istanbul', 'antalya', 'ankara', 'izmir', 'bursa'].includes(toSlug(currentCity)) && displayData && (
+                  <div className="w-full mb-6">
+                    <TrafficMapWidget 
+                      lat={displayData.coord.lat} 
+                      lon={displayData.coord.lon} 
+                      cityName={displayData.city} 
+                    />
+                  </div>
+                )}
                 {/* Last Updated Timestamp - SEO Freshness Signal */}
                 <LastUpdated className="mb-4" />
 
@@ -1004,7 +1008,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                   <div className="mb-8 animate-fadeIn delay-100">
                     <LazySection>
                       <IslandPanel
-                        traffic={modules?.showTraffic ? trafficData : null}
+                        traffic={null}
                         marine={modules?.showMarine ? marineData : null}
                         ski={modules?.showSki ? skiData : null}
                         agriculture={modules?.showAgri ? agricultureData : null}
@@ -1012,7 +1016,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                         fireRisk={fireRiskData}
                         tourism={tourismData}
                         cityDisplay={fromSlug(currentCity)}
-                        trafficCityDisplay={trafficCityDisplay}
+                        trafficCityDisplay={undefined}
                         marineCityDisplay={marineCityDisplay}
                         fallbackNarrative={generateWeatherCommentary(displayData, view.type === 'tomorrow' ? 'tomorrow' : 'today').answerBlock}
                         showNarration={true}

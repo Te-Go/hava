@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import WidgetErrorBoundary from './WidgetErrorBoundary';
-import { TrafficWidget, MarineWidget, SkiConditions, RegionalSummary } from '../islands';
+import { MarineWidget, SkiConditions, RegionalSummary } from '../islands';
 
 // Import real data services
 import { fetchMarineData, generateMarineNarrative, isCoastalCity, type MarineData } from '../services/marineService';
-import { fetchTrafficData, hasTrafficMonitoring, type TomTomTrafficData } from '../services/tomtomTrafficService';
+
 import { calculateSkiConditions, hasSkiResort, type SkiData } from '../services/skiService';
 
-// TomTom API Key (should be in environment variables in production)
-const TOMTOM_API_KEY = import.meta.env.VITE_TOMTOM_API_KEY || '';
+
 
 interface CityProfile {
     key: string;
@@ -55,7 +54,7 @@ const DEMO_CITIES: CityProfile[] = [
 const IslandDemo: React.FC = () => {
     const [selectedCity, setSelectedCity] = useState<CityProfile>(DEMO_CITIES[0]);
     const [marineData, setMarineData] = useState<MarineData | null>(null);
-    const [trafficData, setTrafficData] = useState<TomTomTrafficData | null>(null);
+    const trafficData = null;
     const [skiData, setSkiData] = useState<SkiData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -78,11 +77,7 @@ const IslandDemo: React.FC = () => {
                     setMarineData(marine);
                 }
 
-                // Fetch REAL traffic data from TomTom API for metro cities
-                if (hasTrafficMonitoring(key) || categories.includes('metro')) {
-                    const traffic = await fetchTrafficData(key, TOMTOM_API_KEY);
-                    setTrafficData(traffic);
-                }
+
 
                 // Get ski data for mountain cities
                 if (hasSkiResort(key) || categories.includes('mountain')) {
@@ -110,7 +105,7 @@ const IslandDemo: React.FC = () => {
     }, [selectedCity]);
 
     // Determine which modules to show
-    const showTraffic = hasTrafficMonitoring(selectedCity.key) || selectedCity.categories.includes('metro');
+    const showTraffic = false;
     const showMarine = selectedCity.categories.includes('coastal') || isCoastalCity(selectedCity.key);
     const showSki = hasSkiResort(selectedCity.key) || selectedCity.categories.includes('mountain');
     const showRegional = !showTraffic && !showMarine && !showSki;
@@ -183,23 +178,7 @@ const IslandDemo: React.FC = () => {
                 {/* Widgets Display */}
                 {!loading && (
                     <div className="space-y-6">
-                        {/* Traffic Widget */}
-                        {showTraffic && trafficData && (
-                            <div style={{ '--sinan-slot-height': '250px' } as React.CSSProperties}>
-                                <WidgetErrorBoundary widgetName="Traffic">
-                                    <TrafficWidget
-                                        city={selectedCity.key}
-                                        cityDisplay={selectedCity.name}
-                                        data={{
-                                            congestionLevel: trafficData.congestionLevel,
-                                            mainRoutes: trafficData.mainRoutes.map(r => ({ name: r.name, delay: r.delay }))
-                                        }}
-                                        narrative={trafficData.narrative}
-                                        lastUpdated={trafficData.lastUpdated}
-                                    />
-                                </WidgetErrorBoundary>
-                            </div>
-                        )}
+
 
                         {/* Marine Widget */}
                         {showMarine && marineData && (
