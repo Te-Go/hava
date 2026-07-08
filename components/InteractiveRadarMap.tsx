@@ -45,7 +45,8 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
     const trafficLayerRef = useRef<any>(null);
     const markersGroupRef = useRef<any>(null);
     const contextMarkerRef = useRef<any>(null);
-    const [tomtomKey, setTomtomKey] = useState<string | null>(null);
+    const executionIdRef = useRef<number>(0); // Sequence counter for race condition tracking
+    const [trafficChecked, setTrafficChecked] = useState<boolean>(false);
     const [trafficError, setTrafficError] = useState<boolean>(false);
 
     // Compile compass headings or string directions back to numbers safely
@@ -134,29 +135,27 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
         fetchCitiesWeather();
     }, []);
 
-    // Fetch traffic configuration and enforce safety cap fallback
+    // Fetch traffic configuration to verify circuit breaker
     useEffect(() => {
-        if (activeLayer === 'traffic' && !tomtomKey && !trafficError) {
-            const fetchTrafficConfig = async () => {
+        if (activeLayer === 'traffic' && !trafficChecked && !trafficError) {
+            const checkTraffic = async () => {
                 try {
                     const response = await fetch('/wp-json/sinan/v1/traffic-config');
-                    if (!response.ok) throw new Error('Traffic config fetch failed');
+                    if (!response.ok) throw new Error('Traffic check failed');
                     const data = await response.json();
                     if (data?.status === 'CIRCUIT_BREAKER_ACTIVE' || !data?.success) {
                         setTrafficError(true);
-                    } else if (data?.apiKey) {
-                        setTomtomKey(data.apiKey);
-                    } else {
-                        setTrafficError(true);
                     }
+                    setTrafficChecked(true);
                 } catch (err) {
-                    console.error('[Traffic] Config fetch failed:', err);
+                    console.error('[Traffic] Check failed:', err);
                     setTrafficError(true);
+                    setTrafficChecked(true);
                 }
             };
-            fetchTrafficConfig();
+            checkTraffic();
         }
-    }, [activeLayer, tomtomKey, trafficError]);
+    }, [activeLayer, trafficChecked, trafficError]);
 
     useEffect(() => {
         let isMounted = true;
@@ -215,11 +214,16 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
     }, [weatherData, mapReady]);
 
     useEffect(() => {
+        const myId = ++executionIdRef.current;
         const updateLayers = async () => {
             const map = mapRef.current;
             if (!map || !mapReady) return;
             const L = await import('leaflet');
 
+            // Cancel execution if another toggle run started in the meantime
+            if (myId !== executionIdRef.current) return;
+
+            // Synchronous cleanup of previous overlay layers
             if (radarOverlayRef.current) { map.removeLayer(radarOverlayRef.current); radarOverlayRef.current = null; }
             if (trafficLayerRef.current) { map.removeLayer(trafficLayerRef.current); trafficLayerRef.current = null; }
             if (markersGroupRef.current) markersGroupRef.current.clearLayers();
@@ -280,8 +284,9 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                     radarOverlayRef.current = radarLayer;
                 }
             } else if (safeLayer === 'traffic') {
-                if (tomtomKey) {
-                    const trafficUrl = `https://a.api.tomtom.com/traffic/map/4/tile/flow/relative-delay/{z}/{x}/{y}.png?key=${tomtomKey}`;
+                // AMENDMENT 2: Securely load from local WordPress proxy route
+                if (trafficChecked && !trafficError) {
+                    const trafficUrl = '/wp-json/sinan/v1/traffic-tiles/{z}/{x}/{y}';
                     const trafficLayer = L.tileLayer(trafficUrl, { opacity: 0.85, maxZoom: 18 });
                     trafficLayer.addTo(map);
                     trafficLayerRef.current = trafficLayer;
@@ -327,7 +332,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
             }
         };
         updateLayers();
-    }, [activeLayer, cityWeatherData, radarConfig, mapReady, weatherData]);
+    }, [activeLayer, cityWeatherData, radarConfig, mapReady, weatherData, trafficChecked, trafficError]);
 
     return (
         <div className="w-full relative rounded-xl overflow-hidden shadow-lg border border-slate-100 dark:border-white/10 bg-white dark:bg-slate-900 transition-colors duration-300">
@@ -346,7 +351,7 @@ const InteractiveRadarMap: React.FC<InteractiveRadarMapProps> = ({ weatherData, 
                         Yoğunluk nedeniyle şu an canlı harita yüklenemiyor.
                     </div>
                 )}
-                {activeLayer === 'traffic' && !tomtomKey && !trafficError && (
+                {activeLayer === 'traffic' && !trafficChecked && !trafficError && (
                     <div className="absolute inset-0 bg-slate-50 dark:bg-slate-900 z-[1000] flex items-center justify-center border border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500 text-sm animate-pulse">
                         Canlı Yol Durumu Yükleniyor...
                     </div>

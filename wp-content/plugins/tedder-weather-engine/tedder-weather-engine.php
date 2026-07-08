@@ -23,8 +23,9 @@ class TedderWeatherEngine
     {
         $this->log_file = dirname(__FILE__) . '/seo_events.log';
 
-        // Register /traffic-config REST API route with Transient circuit breaker
+        // Register REST API routes for Traffic configuration and Tiles proxy
         add_action('rest_api_init', function () {
+            // 1. Config endpoint: checks circuit breaker and registers a map load without exposing the API key
             register_rest_route('sinan/v1', '/traffic-config', array(
                 'methods' => 'GET',
                 'callback' => function() {
@@ -36,21 +37,66 @@ class TedderWeatherEngine
                     if ($current_loads >= 2400) {
                         return new WP_REST_Response(array(
                             'success' => false,
-                             'status' => 'CIRCUIT_BREAKER_ACTIVE'
+                            'status' => 'CIRCUIT_BREAKER_ACTIVE'
                         ), 200);
                     }
                     
                     set_transient('tomtom_map_loads_today', $current_loads + 1, DAY_IN_SECONDS);
                     
-                    $key = get_option('tedder_tomtom_api_key', '');
                     return new WP_REST_Response(array(
-                        'success' => true,
-                        'apiKey' => $key
+                        'success' => true
                     ), 200);
                 },
                 'permission_callback' => '__return_true'
-             ));
-         });
+            ));
+
+            // 2. Tiles proxy endpoint: proxies TomTom traffic map tile requests securely
+            register_rest_route('sinan/v1', '/traffic-tiles/(?P<z>\d+)/(?P<x>\d+)/(?P<y>\d+)', array(
+                'methods' => 'GET',
+                'callback' => function($request) {
+                    $current_loads = get_transient('tomtom_map_loads_today');
+                    if ($current_loads !== false && $current_loads >= 2400) {
+                        status_header(403);
+                        echo 'Circuit breaker active';
+                        exit;
+                    }
+
+                    $z = $request->get_param('z');
+                    $x = $request->get_param('x');
+                    $y = $request->get_param('y');
+
+                    $key = get_option('tedder_tomtom_api_key', '');
+                    if (empty($key)) {
+                        status_header(404);
+                        echo 'API key not configured';
+                        exit;
+                    }
+
+                    $url = "https://a.api.tomtom.com/traffic/map/4/tile/flow/relative-delay/${z}/${x}/${y}.png?key=${key}";
+
+                    // AMENDMENT 1: Strict 3-second connection timeout
+                    $response = wp_remote_get($url, array('timeout' => 3));
+                    if (is_wp_error($response)) {
+                        status_header(502);
+                        echo 'TomTom gateway error';
+                        exit;
+                    }
+
+                    $body = wp_remote_retrieve_body($response);
+                    $content_type = wp_remote_retrieve_header($response, 'content-type');
+                    if (empty($content_type)) {
+                        $content_type = 'image/png';
+                    }
+
+                    // AMENDMENT 1: Emit aggressive browser caching headers
+                    header("Content-Type: " . $content_type);
+                    header("Cache-Control: public, max-age=900, stale-while-revalidate=60");
+                    echo $body;
+                    exit;
+                },
+                'permission_callback' => '__return_true'
+            ));
+        });
 
         // SERVER-SIDE CLEANUP: Delete the stale crashing weather-app.js from all possible directories
         add_action('init', function() {
