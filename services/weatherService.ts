@@ -614,6 +614,26 @@ const getWeatherIcon = (code: number, isDay: boolean, precipProb: number = 0): s
 }
 
 export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<WeatherData> => {
+  const rawWeather = rawData; // The raw weatherData node from the payload
+  const utcOffsetMs = (rawWeather.utc_offset_seconds || 0) * 1000;
+
+  // Safely compile deterministic, zero-trust UTC millisecond values
+  const currentTimeStr = rawWeather.current_weather?.time || rawWeather.current?.time || '';
+  const currentUtcMs = currentTimeStr ? (Date.parse(currentTimeStr + 'Z') - utcOffsetMs) : Date.now();
+  
+  const sunrise0 = rawWeather.daily?.sunrise?.[0];
+  const sunriseUtcMs = sunrise0 ? (Date.parse(sunrise0 + 'Z') - utcOffsetMs) : undefined;
+  
+  const sunset0 = rawWeather.daily?.sunset?.[0];
+  const sunsetUtcMs = sunset0 ? (Date.parse(sunset0 + 'Z') - utcOffsetMs) : undefined;
+
+  // Map tomorrow's true solar boundaries straight from Index 1 of the daily payload arrays
+  const sunrise1 = rawWeather.daily?.sunrise?.[1];
+  const tomorrowSunriseUtcMs = sunrise1 ? (Date.parse(sunrise1 + 'Z') - utcOffsetMs) : undefined;
+
+  const sunset1 = rawWeather.daily?.sunset?.[1];
+  const tomorrowSunsetUtcMs = sunset1 ? (Date.parse(sunset1 + 'Z') - utcOffsetMs) : undefined;
+
   if (rawData && rawData.current_weather && !rawData.current) {
     rawData.current = {
       temperature_2m: rawData.current_weather.temperature ?? 0,
@@ -695,8 +715,8 @@ export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<W
     const offsetSeconds = typeof rawData?.utc_offset_seconds === 'number' ? rawData.utc_offset_seconds : 10800;
     const sunriseStr = daily.sunrise?.[i];
     const sunsetStr = daily.sunset?.[i];
-    const sunriseUtcMs = sunriseStr ? new Date(sunriseStr + 'Z').getTime() - (offsetSeconds * 1000) : undefined;
-    const sunsetUtcMs = sunsetStr ? new Date(sunsetStr + 'Z').getTime() - (offsetSeconds * 1000) : undefined;
+    const sunriseUtcMs = sunriseStr ? (Date.parse(sunriseStr + 'Z') - offsetSeconds * 1000) : undefined;
+    const sunsetUtcMs = sunsetStr ? (Date.parse(sunsetStr + 'Z') - offsetSeconds * 1000) : undefined;
 
     dailyData.push({
       day: displayDay,
@@ -739,12 +759,12 @@ export const mapOpenMeteoToModel = async (city: string, rawData: any): Promise<W
     uvIndex: hourly.uv_index?.[validIndex] ?? 0,
     feelsLike: current.apparent_temperature ?? 0,
     pressure: current.surface_pressure ?? 0,
-    aqi: await fetchAirQuality(data.latitude ?? 0, data.longitude ?? 0, current.time),
+    aqi: await fetchAirQuality(data.latitude ?? 0, data.longitude ?? 0, currentTimeStr),
     sunrise: daily.sunrise?.[0]?.split('T')[1] || '06:00',
     sunset: daily.sunset?.[0]?.split('T')[1] || '18:00',
-    sunriseUtcMs: daily.sunrise?.[0] ? new Date(daily.sunrise[0] + 'Z').getTime() - (offsetSeconds * 1000) : undefined,
-    sunsetUtcMs: daily.sunset?.[0] ? new Date(daily.sunset[0] + 'Z').getTime() - (offsetSeconds * 1000) : undefined,
-    currentUtcMs: current.time ? new Date(current.time + 'Z').getTime() - (offsetSeconds * 1000) : undefined,
+    sunriseUtcMs,
+    sunsetUtcMs,
+    currentUtcMs,
     cloudCover: current.cloud_cover ?? 0,
     hourly: hourlyData,
     daily: dailyData
