@@ -44,7 +44,7 @@ import { Icon } from './components/Icons';
 // Islands & Services
 import { IslandPanel } from './islands';
 import { fetchMarineData, isCoastalCity, type MarineData } from './services/marineService';
-import { TrafficMapWidget } from './components/TrafficMapWidget';
+
 import { hasSkiResort, resolveSkiCityKey, calculateSkiConditions, type SkiData } from './services/skiService';
 import { mapOpenMeteoToModel } from './services/weatherService';
 import { findNearestHub } from './services/locationUtils'; // Hub & Spoke Logic
@@ -972,16 +972,7 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                   onToggleView={handleViewToggle}
                 />
 
-                {/* Apple MapKit JS Traffic Map Widget for Tier 1 Cities */}
-                {view.type !== '15-days' && ['istanbul', 'antalya', 'ankara', 'izmir', 'bursa'].includes(toSlug(currentCity).toLowerCase()) && displayData && (
-                  <div className="w-full mb-6">
-                    <TrafficMapWidget 
-                      lat={displayData.coord.lat} 
-                      lon={displayData.coord.lon} 
-                      cityName={displayData.city} 
-                    />
-                  </div>
-                )}
+
                 {/* Last Updated Timestamp - SEO Freshness Signal */}
                 <LastUpdated className="mb-4" />
 
@@ -1010,7 +1001,12 @@ const App: React.FC<AppProps> = ({ locationId = 0, payload }) => {
                       <IslandPanel
                         traffic={null}
                         marine={modules?.showMarine ? marineData : null}
-                        ski={modules?.showSki ? skiData : null}
+                        ski={(() => {
+                          if (!displayData?.currentUtcMs) return null;
+                          const month1Indexed = new Date(displayData.currentUtcMs).getUTCMonth() + 1;
+                          const isSkiSeason = month1Indexed >= 10 || month1Indexed <= 3;
+                          return isSkiSeason ? skiData : null;
+                        })()}
                         agriculture={modules?.showAgri ? agricultureData : null}
                         altitude={altitudeData}
                         fireRisk={fireRiskData}

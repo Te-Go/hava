@@ -16,6 +16,13 @@ interface Props {
 }
 
 const SkiConditions: React.FC<Props> = ({ data, narrative, lastUpdated }) => {
+    // Zero-trust seasonal gating: October to March (1-indexed 10 to 3)
+    const month1Indexed = new Date(lastUpdated || Date.now()).getUTCMonth() + 1;
+    const isSkiSeason = month1Indexed >= 10 || month1Indexed <= 3;
+
+    if (!isSkiSeason) {
+        return null;
+    }
     const avalancheConfig: Record<string, { color: string; bgColor: string; darkColor: string; darkBgColor: string; label: string }> = {
         low: { color: 'text-green-600', bgColor: 'bg-green-50', darkColor: 'text-green-400', darkBgColor: 'dark:bg-green-500/20', label: 'Düşük' },
         moderate: { color: 'text-amber-600', bgColor: 'bg-amber-50', darkColor: 'text-yellow-400', darkBgColor: 'dark:bg-yellow-500/20', label: 'Orta' },

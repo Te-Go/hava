@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { WidgetErrorBoundary } from './components/WidgetErrorBoundary';
 
-import { TrafficMapWidget } from './components/TrafficMapWidget';
+
 
 // Island Components
 import {
@@ -53,23 +53,7 @@ if (payload && payload.modules) {
     }
   }
 
-  // 2. Mount Traffic Island
-  if (payload.modules.showTraffic) {
-    const trafficRoot = document.getElementById('weather-traffic-root');
-    if (trafficRoot) {
-      ReactDOM.createRoot(trafficRoot).render(
-        <React.StrictMode>
-          <WidgetErrorBoundary>
-            <TrafficMapWidget 
-              lat={payload.weatherData?.latitude || 39.9334} 
-              lon={payload.weatherData?.longitude || 32.8597} 
-              cityName={payload.city} 
-            />
-          </WidgetErrorBoundary>
-        </React.StrictMode>
-      );
-    }
-  }
+
   
   // 3. Mount Marine Island
   if (payload.modules.showMarine) {
