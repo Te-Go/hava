@@ -1,0 +1,14 @@
+# ====================================================================
+# TG DİJİTAL — HAVAPRO NATIVE PASSENGER PROXY INTERCEPTION MATRIX
+# ====================================================================
+RewriteEngine On
+
+# RULE 1: Completely shield and exclude the headless WordPress admin path
+RewriteRule ^cms($|/) - [L]
+
+# RULE 2: Bind Domain Root directly to the Standalone Next.js Node Process
+PassengerEnabled on
+PassengerAppType node
+PassengerAppRoot /home/u430632096/domains/hava-durumlari.tr/nodejs
+PassengerStartupFile server.js
+PassengerAppEnv production
