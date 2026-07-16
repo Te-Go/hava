@@ -1,50 +1,52 @@
-name: Automated Hostinger Deployment
+name: Automated Hostinger Next.js Standalone Deployment
 
 on:
   push:
     branches:
-      - main # Triggers the deployment every time code is pushed to the main branch
+      - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Deploy Tedder Weather Engine Plugin
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
         with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          port: 21
-          local-dir: ./wp-content/plugins/tedder-weather-engine/
-          server-dir: /public_html/wp-content/plugins/tedder-weather-engine/
-          state-name: .ftp-plugin-sync-state.json
-          dangerous-clean-slate: true
+          node-version: 20
+          cache: "npm"
 
-      - name: Deploy GeneratePress Child Theme
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          port: 21
-          local-dir: ./generatepress_child/
-          server-dir: /public_html/wp-content/themes/generatepress_child/
-          state-name: .ftp-theme-sync-state.json
-          dangerous-clean-slate: true
+      - name: Install Dependencies
+        run: npm ci
 
-      - name: Deploy Root Assets (Logos)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Run Build & Package Standalone
+        run: |
+          npm run build
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+
+      - name: Deploy Standalone Engine via SCP
+        uses: appleboy/scp-action@v0.1.7
         with:
-          server: ${{ secrets.HOSTINGER_FTP_SERVER }}
-          username: ${{ secrets.HOSTINGER_FTP_USERNAME }}
-          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
-          port: 21
-          local-dir: ./logos/
-          server-dir: /public_html/logos/
-          state-name: .ftp-logos-sync-state.json
-          dangerous-clean-slate: true
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          source: ".next/standalone/*,.next/standalone/**"
+          target: "/home/u430632096/domains/hava-durumlari.tr/nodejs"
+          strip_components: 2
+
+      - name: Restart PM2 Standalone Process via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          script: |
+            cd /home/u430632096/domains/hava-durumlari.tr/nodejs
+            mkdir -p tmp && touch tmp/restart.txt
+            pm2 restart all || pm2 start server.js --name "havapro-nextjs"
