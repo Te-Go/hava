@@ -32,20 +32,20 @@ jobs:
       - name: Deploy Standalone Archive via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.HOSTINGER_SSH_HOST }}
-          username: ${{ secrets.HOSTINGER_SSH_USER }}
-          key: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY || secrets.HOSTINGER_SSH_KEY }}
-          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          host: ${{ secrets.HOSTINGER_HOST || secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_USER || secrets.HOSTINGER_SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY || secrets.HOSTINGER_SSH_PRIVATE_KEY || secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT || secrets.HOSTINGER_SSH_PORT || 22 }}
           source: "standalone.tar.gz"
           target: "/home/u430632096/domains/hava-durumlari.tr/nodejs"
 
       - name: Restart PM2 Standalone Process via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOSTINGER_SSH_HOST }}
-          username: ${{ secrets.HOSTINGER_SSH_USER }}
-          key: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY || secrets.HOSTINGER_SSH_KEY }}
-          port: ${{ secrets.HOSTINGER_SSH_PORT || 22 }}
+          host: ${{ secrets.HOSTINGER_HOST || secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_USER || secrets.HOSTINGER_SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY || secrets.HOSTINGER_SSH_PRIVATE_KEY || secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT || secrets.HOSTINGER_SSH_PORT || 22 }}
           script: |
             cd /home/u430632096/domains/hava-durumlari.tr/nodejs
             tar -xzf standalone.tar.gz
