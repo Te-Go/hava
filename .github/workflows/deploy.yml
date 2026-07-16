@@ -49,4 +49,7 @@ jobs:
           script: |
             cd /home/u430632096/domains/hava-durumlari.tr/nodejs
             mkdir -p tmp && touch tmp/restart.txt
-            pm2 restart all || pm2 start server.js --name "havapro-nextjs"
+            source ~/.bashrc 2>/dev/null || source ~/.profile 2>/dev/null
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            pm2 describe havapro-nextjs > /dev/null && pm2 restart havapro-nextjs || pm2 start server.js --name "havapro-nextjs"
